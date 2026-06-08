@@ -88,7 +88,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <RootLayoutNav />
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
       </AuthProvider>
     </SafeAreaProvider>
   );
