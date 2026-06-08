@@ -10,9 +10,12 @@ import { Alert as SosAlert, Circle, Place } from '@/types/database';
 import { MapHeader } from '@/components/map/MapHeader';
 import { CircleSelector } from '@/components/map/CircleSelector';
 import { MapPanel } from '@/components/map/MapPanel';
+import { MapSearchModal } from '@/components/map/MapSearchModal';
+import { MapNotificationsModal } from '@/components/map/MapNotificationsModal';
 import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
 import { SosAlertBanner } from '@/components/sos/SosAlertBanner';
 import { FriendMarker } from '@/components/map/types';
+import { getUnreadAlertCount } from '@/lib/alerts';
 import { getDisplayName } from '@/lib/profile';
 
 export default function MapScreen() {
@@ -31,10 +34,28 @@ export default function MapScreen() {
     senderName: string;
     message: string;
   } | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!user?.id) {
+      setUnreadAlertCount(0);
+      return;
+    }
+
+    const count = await getUnreadAlertCount(user.id);
+    setUnreadAlertCount(count);
+  }, [user?.id]);
 
   useEffect(() => {
     loadInitialData();
-  }, [user?.id]);
+    refreshUnreadCount();
+  }, [user?.id, refreshUnreadCount]);
+
+  useEffect(() => {
+    refreshUnreadCount();
+  }, [refreshUnreadCount, circles.length]);
 
   useEffect(() => {
     if (selectedCircle) {
@@ -73,6 +94,7 @@ export default function MapScreen() {
             message: alert.message || 'Sent an SOS alert',
           });
 
+          refreshUnreadCount();
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         }
       )
@@ -81,7 +103,7 @@ export default function MapScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, circles]);
+  }, [user?.id, circles, refreshUnreadCount]);
 
   async function loadInitialData() {
     if (!user?.id) return;
@@ -182,7 +204,13 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapHeader profile={profile} user={user} />
+      <MapHeader
+        profile={profile}
+        user={user}
+        unreadCount={unreadAlertCount}
+        onSearchPress={() => setShowSearchModal(true)}
+        onNotificationsPress={() => setShowNotificationsModal(true)}
+      />
 
       <CircleSelector
         circles={circles}
@@ -219,6 +247,23 @@ export default function MapScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         onSelectFriend={handleSelectFriend}
+      />
+
+      <MapSearchModal
+        visible={showSearchModal}
+        circleName={selectedCircle?.name}
+        friends={friends}
+        places={places}
+        selectedFriendId={selectedFriendId}
+        onClose={() => setShowSearchModal(false)}
+        onSelectFriend={handleSelectFriend}
+      />
+
+      <MapNotificationsModal
+        visible={showNotificationsModal}
+        userId={user?.id || ''}
+        onClose={() => setShowNotificationsModal(false)}
+        onAlertsChanged={refreshUnreadCount}
       />
     </View>
   );

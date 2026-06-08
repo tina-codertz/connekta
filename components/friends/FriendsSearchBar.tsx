@@ -7,16 +7,22 @@ interface FriendsSearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   onClear: () => void;
+  placeholder?: string;
 }
 
-export function FriendsSearchBar({ value, onChangeText, onClear }: FriendsSearchBarProps) {
+export function FriendsSearchBar({
+  value,
+  onChangeText,
+  onClear,
+  placeholder = 'Search by email or name',
+}: FriendsSearchBarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.wrapper}>
         <Search size={20} color={Colors.neutral[500]} style={styles.icon} />
         <TextInput
           style={styles.input}
-          placeholder="Search by email or name"
+          placeholder={placeholder}
           placeholderTextColor={Colors.neutral[500]}
           value={value}
           onChangeText={onChangeText}

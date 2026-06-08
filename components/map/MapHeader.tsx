@@ -11,9 +11,18 @@ import type { User } from '@supabase/supabase-js';
 interface MapHeaderProps {
   profile?: Profile | null;
   user?: User | null;
+  unreadCount?: number;
+  onNotificationsPress?: () => void;
+  onSearchPress?: () => void;
 }
 
-export function MapHeader({ profile, user }: MapHeaderProps) {
+export function MapHeader({
+  profile,
+  user,
+  unreadCount = 0,
+  onNotificationsPress,
+  onSearchPress,
+}: MapHeaderProps) {
   return (
     <View style={styles.header}>
       <Column spacing={2}>
@@ -21,11 +30,19 @@ export function MapHeader({ profile, user }: MapHeaderProps) {
         <Text textStyle={styles.name}>{getDisplayName(profile, user)}</Text>
       </Column>
       <Row spacing={8}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onNotificationsPress}
+          accessibilityLabel="Open notifications"
+        >
           <Bell size={24} color={Colors.neutral[0]} />
-          <View style={styles.notificationDot} />
+          {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onSearchPress}
+          accessibilityLabel="Search map"
+        >
           <Search size={24} color={Colors.neutral[0]} />
         </TouchableOpacity>
       </Row>

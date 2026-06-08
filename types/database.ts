@@ -326,6 +326,14 @@ export interface Database {
           message: string;
         };
       };
+      mark_alert_read: {
+        Args: { p_alert_id: string };
+        Returns: undefined;
+      };
+      mark_all_alerts_read: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: {
       [_ in never]: never;

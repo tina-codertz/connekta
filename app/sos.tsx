@@ -149,58 +149,64 @@ export default function SosScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <Column spacing={24} style={styles.content}>
-        <View style={styles.warningCard}>
-          <AlertTriangle size={28} color="#FCA5A5" />
-          <Column spacing={8} style={styles.warningText}>
-            <Text textStyle={styles.warningTitle}>Circle members only</Text>
-            <Text textStyle={styles.warningBody}>
-              Pressing SOS notifies people in your circles — not friends outside your circles.
-              Your current location is included when available.
-            </Text>
-          </Column>
-        </View>
-
-        <Column spacing={12}>
-          <Text textStyle={styles.sectionTitle}>Who will be notified</Text>
-
-          {loadingCircles ? (
-            <ActivityIndicator color={Colors.primary[500]} style={styles.loader} />
-          ) : circles.length ? (
-            <Column spacing={8}>
-              {circles.map((circle) => (
-                <View key={circle.id} style={styles.circleRow}>
-                  <Row spacing={10} style={styles.circleInfo}>
-                    <Users size={18} color={Colors.primary[400]} />
-                    <Text textStyle={styles.circleName}>{circle.name}</Text>
-                  </Row>
-                  <Text textStyle={styles.circleCount}>
-                    {circle.memberCount === 1 ? '1 member' : `${circle.memberCount} members`}
-                  </Text>
-                </View>
-              ))}
-              <Text textStyle={styles.totalCount}>
-                {totalMembers === 1
-                  ? '1 person will be notified'
-                  : `${totalMembers} people will be notified`}
+      <View style={styles.body}>
+        <ScrollView
+          style={styles.infoScroll}
+          contentContainerStyle={styles.infoContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.warningCard}>
+            <AlertTriangle size={28} color="#FCA5A5" />
+            <Column spacing={8} style={styles.warningText}>
+              <Text textStyle={styles.warningTitle}>Circle members only</Text>
+              <Text textStyle={styles.warningBody}>
+                Pressing SOS notifies people in your circles — not friends outside your circles.
+                Your current location is included when available.
               </Text>
             </Column>
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text textStyle={styles.emptyText}>
-                You are not in any circles yet. Create or join a circle to use SOS.
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyAction}
-                onPress={() => router.replace('/circles?action=join')}
-              >
-                <Text textStyle={styles.emptyActionText}>Go to Circles</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </Column>
+          </View>
 
-        <View style={styles.buttonSection}>
+          <Column spacing={12}>
+            <Text textStyle={styles.sectionTitle}>Who will be notified</Text>
+
+            {loadingCircles ? (
+              <ActivityIndicator color={Colors.primary[500]} style={styles.loader} />
+            ) : circles.length ? (
+              <Column spacing={8}>
+                {circles.map((circle) => (
+                  <View key={circle.id} style={styles.circleRow}>
+                    <Row spacing={10} style={styles.circleInfo}>
+                      <Users size={18} color={Colors.primary[400]} />
+                      <Text textStyle={styles.circleName}>{circle.name}</Text>
+                    </Row>
+                    <Text textStyle={styles.circleCount}>
+                      {circle.memberCount === 1 ? '1 member' : `${circle.memberCount} members`}
+                    </Text>
+                  </View>
+                ))}
+                <Text textStyle={styles.totalCount}>
+                  {totalMembers === 1
+                    ? '1 person will be notified'
+                    : `${totalMembers} people will be notified`}
+                </Text>
+              </Column>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text textStyle={styles.emptyText}>
+                  You are not in any circles yet. Create or join a circle to use SOS.
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyAction}
+                  onPress={() => router.replace('/circles?action=join')}
+                >
+                  <Text textStyle={styles.emptyActionText}>Go to Circles</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Column>
+        </ScrollView>
+
+        <View style={styles.sosSection}>
           <Pressable
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
@@ -218,7 +224,7 @@ export default function SosScreen() {
               {sending ? (
                 <ActivityIndicator color={Colors.neutral[0]} size="large" />
               ) : (
-                <Column spacing={8} alignment="center">
+                <Column spacing={8} alignment="center" style={styles.sosButtonContent}>
                   <Text textStyle={styles.sosLabel}>{sent ? 'SOS Sent' : 'SOS'}</Text>
                   <Text textStyle={styles.sosHint}>
                     {sent
@@ -237,7 +243,7 @@ export default function SosScreen() {
             ) : null}
           </Pressable>
         </View>
-      </Column>
+      </View>
     </View>
   );
 }
@@ -273,10 +279,26 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44,
   },
-  content: {
+  body: {
     flex: 1,
+  },
+  infoScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  infoContent: {
     paddingHorizontal: 24,
     paddingTop: 24,
+    paddingBottom: 16,
+    gap: 24,
+  },
+  sosSection: {
+    flex: 1,
+    minHeight: 280,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   warningCard: {
@@ -371,12 +393,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary[400],
   },
-  buttonSection: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 24,
-  },
   sosButtonOuter: {
     width: 220,
     borderRadius: 110,
@@ -402,16 +418,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
+  sosButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
   sosLabel: {
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: '800',
     color: Colors.neutral[0],
     letterSpacing: 2,
+    textAlign: 'center',
   },
   sosHint: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
+    width: '100%',
   },
   progressTrack: {
     height: 4,
