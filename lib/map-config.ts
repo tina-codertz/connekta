@@ -1,4 +1,5 @@
-const MAPBOX_STYLE = 'mapbox/dark-v11';
+/** Standard Mapbox street map. Override with EXPO_PUBLIC_MAPBOX_STYLE in .env */
+const MAPBOX_STYLE = process.env.EXPO_PUBLIC_MAPBOX_STYLE ?? 'mapbox/streets-v12';
 
 export const mapConfig = {
   provider: process.env.EXPO_PUBLIC_MAP_PROVIDER ?? 'mapbox',
@@ -11,7 +12,13 @@ export function isMapboxConfigured(): boolean {
   return mapConfig.provider === 'mapbox' && mapConfig.accessToken.length > 0;
 }
 
-/** Mapbox GL style URL for native SDK and web */
+/** Mapbox style URL for the native Mapbox SDK */
 export function getMapboxStyleUrl(): string {
-  return `mapbox://styles/${MAPBOX_STYLE}`;
+  return `mapbox://styles/${mapConfig.style}`;
+}
+
+/** HTTPS style URL for mapbox-gl (web + WebView fallback) */
+export function getMapboxGlStyleUrl(): string {
+  const token = mapConfig.accessToken;
+  return `https://api.mapbox.com/styles/v1/${mapConfig.style}?access_token=${encodeURIComponent(token)}`;
 }

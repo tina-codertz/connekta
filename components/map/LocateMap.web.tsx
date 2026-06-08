@@ -1,7 +1,7 @@
 import React, { createElement, useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { getMapboxStyleUrl, isMapboxConfigured, mapConfig } from '@/lib/map-config';
+import { getMapboxGlStyleUrl, isMapboxConfigured, mapConfig } from '@/lib/map-config';
 import type { LocationObject } from '@/lib/location';
 import { FriendMarker } from './types';
 import { Place } from '@/types/database';
@@ -45,7 +45,7 @@ export const LocateMap = forwardRef<LocateMapHandle, LocateMapProps>(function Lo
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: getMapboxStyleUrl(),
+      style: getMapboxGlStyleUrl(),
       center: [location.coords.longitude, location.coords.latitude],
       zoom: 13,
       attributionControl: true,

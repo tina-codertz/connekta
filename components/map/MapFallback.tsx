@@ -51,6 +51,8 @@ const styles = StyleSheet.create({
     color: Colors.neutral[400],
     textAlign: 'center',
     marginBottom: 16,
+    lineHeight: 20,
+    paddingHorizontal: 8,
   },
   center: { alignItems: 'center' },
   coordinates: {
