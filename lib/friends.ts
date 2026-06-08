@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { consumePendingFriendInviter } from '@/lib/pending-friend-invite';
 import type { Profile } from '@/types/database';
 
 export async function loadFriendProfiles(userId: string): Promise<Profile[]> {
@@ -91,4 +92,25 @@ export async function loadPendingFriendRequests(userId: string) {
     received: received ?? [],
     sent: sent ?? [],
   };
+}
+
+export async function processPendingFriendInvite(currentUserId: string): Promise<{
+  sent: boolean;
+  inviterId?: string;
+  error?: string;
+}> {
+  const inviterId = await consumePendingFriendInviter();
+  if (!inviterId || inviterId === currentUserId) {
+    return { sent: false };
+  }
+
+  const { error } = await sendFriendRequest(currentUserId, inviterId);
+  if (error) {
+    if (error.message.includes('already sent')) {
+      return { sent: false, inviterId };
+    }
+    return { sent: false, inviterId, error: error.message };
+  }
+
+  return { sent: true, inviterId };
 }

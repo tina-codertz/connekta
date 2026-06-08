@@ -21,6 +21,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
         'LocateMate needs your location to share it with your circles and friends.',
       NSContactsUsageDescription:
         'LocateMate uses your contacts to help you find friends who already use the app.',
+      LSApplicationQueriesSchemes: ['whatsapp'],
     },
   },
   android: {
@@ -69,6 +70,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
   extra: {
     mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN,
     mapProvider: process.env.EXPO_PUBLIC_MAP_PROVIDER ?? 'mapbox',
+    appInviteUrl: process.env.EXPO_PUBLIC_APP_INVITE_URL,
     // Used only for native Mapbox SDK downloads during EAS/prebuild builds
     mapboxDownloadsToken: process.env.MAPBOX_DOWNLOADS_TOKEN,
   },

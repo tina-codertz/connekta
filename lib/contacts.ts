@@ -5,6 +5,7 @@ export interface DeviceContact {
   id: string;
   name: string;
   emails: string[];
+  phones: string[];
 }
 
 export async function loadDeviceContacts(): Promise<{
@@ -27,7 +28,7 @@ export async function loadDeviceContacts(): Promise<{
   }
 
   const { data } = await Contacts.getContactsAsync({
-    fields: [Contacts.Fields.Emails, Contacts.Fields.Name],
+    fields: [Contacts.Fields.Emails, Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
     sort: Contacts.SortTypes.FirstName,
   });
 
@@ -38,14 +39,19 @@ export async function loadDeviceContacts(): Promise<{
       .map((entry) => entry.email?.trim().toLowerCase())
       .filter((email): email is string => Boolean(email));
 
-    if (!emails.length) {
+    const phones = (contact.phoneNumbers ?? [])
+      .map((entry) => entry.number?.trim())
+      .filter((phone): phone is string => Boolean(phone));
+
+    if (!emails.length && !phones.length) {
       continue;
     }
 
     contacts.push({
-      id: contact.id ?? `${contact.name}-${emails[0]}`,
-      name: contact.name?.trim() || emails[0],
+      id: contact.id ?? `${contact.name}-${emails[0] ?? phones[0]}`,
+      name: contact.name?.trim() || emails[0] || phones[0] || 'Contact',
       emails,
+      phones,
     });
   }
 

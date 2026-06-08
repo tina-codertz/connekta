@@ -26,7 +26,7 @@ export function ModalSheet({ visible, title, onClose, children }: ModalSheetProp
             <X size={24} color={Colors.neutral[400]} />
           </TouchableOpacity>
         </View>
-        {children}
+        <View style={styles.body}>{children}</View>
       </View>
     </Modal>
   );
@@ -59,5 +59,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[800],
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  body: {
+    flex: 1,
   },
 });

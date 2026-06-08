@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
-import { Row, Text } from '@/components/ExpoUI';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
 interface SegmentedTab {
@@ -16,7 +16,7 @@ interface SegmentedTabsProps {
 
 export function SegmentedTabs({ tabs, activeTab, onTabChange }: SegmentedTabsProps) {
   return (
-    <Row spacing={8} style={styles.container}>
+    <View style={styles.container}>
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
         return (
@@ -34,18 +34,23 @@ export function SegmentedTabs({ tabs, activeTab, onTabChange }: SegmentedTabsPro
           </TouchableOpacity>
         );
       })}
-    </Row>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
+    gap: 8,
     paddingHorizontal: 24,
     marginBottom: 16,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: Colors.neutral[900],
@@ -57,9 +62,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[800],
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.neutral[500],
     fontWeight: '500',
+    textAlign: 'center',
   },
   activeTabText: {
     color: Colors.primary[400],

@@ -7,9 +7,11 @@ import { supabase } from '@/lib/supabase';
 import {
   loadFriendProfiles,
   loadPendingFriendRequests,
+  processPendingFriendInvite,
   searchProfilesForFriends,
   sendFriendRequest,
 } from '@/lib/friends';
+import { getDisplayName } from '@/lib/profile';
 import { Colors } from '@/lib/theme';
 import { Profile } from '@/types/database';
 import { ScreenHeader, HeaderActionButton } from '@/components/ui/ScreenHeader';
@@ -27,7 +29,8 @@ import { FriendRequestWithProfile } from '@/components/friends/types';
 type RequestListItem = FriendRequestWithProfile & { type: 'received' | 'sent' };
 
 export default function FriendsScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const inviterName = getDisplayName(profile, user);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
@@ -42,6 +45,22 @@ export default function FriendsScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    processPendingFriendInvite(user.id).then((result) => {
+      if (result.sent) {
+        Alert.alert(
+          'Invite accepted',
+          'You joined via a friend invite. They will see your friend request.'
+        );
+        loadFriendRequests();
+      }
+    });
+  }, [user?.id]);
 
   async function loadData() {
     setLoading(true);
@@ -262,7 +281,7 @@ export default function FriendsScreen() {
                   <EmptyState
                     icon={<Users size={48} color={Colors.neutral[600]} />}
                     title="No Friends Yet"
-                    description="Search by name or email, or find people from your contacts."
+                    description="Search for friends on LocateMate, or invite people from your contacts."
                     action={
                       <ActionButtonGroup>
                         <GradientSubmitButton
@@ -314,6 +333,7 @@ export default function FriendsScreen() {
       <AddFriendModal
         visible={showAddFriendModal}
         userId={user?.id || ''}
+        inviterName={inviterName}
         friends={friends}
         sentRequestReceiverIds={sentRequests.map((request) => request.receiver_id)}
         onClose={() => setShowAddFriendModal(false)}
