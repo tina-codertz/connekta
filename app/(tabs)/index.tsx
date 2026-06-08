@@ -18,7 +18,7 @@ import { MapSearchModal } from '@/components/map/MapSearchModal';
 import { MapNotificationsModal } from '@/components/map/MapNotificationsModal';
 import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
 import { SosAlertBanner } from '@/components/sos/SosAlertBanner';
-import { FriendMarker } from '@/components/map/types';
+import { CircleMemberLocation, FriendMarker } from '@/components/map/types';
 import { getUnreadAlertCount } from '@/lib/alerts';
 import {
   deletePlace,
@@ -26,7 +26,7 @@ import {
   isPlaceVisibleOnMap,
   updatePlaceSettings,
 } from '@/lib/places';
-import { fetchCircleMemberMarkers } from '@/lib/circle-locations';
+import { circleMembersToMapMarkers, fetchCircleMembers } from '@/lib/circle-locations';
 import { getDisplayName } from '@/lib/profile';
 
 export default function MapScreen() {
@@ -35,7 +35,7 @@ export default function MapScreen() {
   const locationSharingEnabled = profile?.is_location_enabled ?? true;
   const { location } = useLocationTracking(user?.id, locationSharingEnabled);
 
-  const [friends, setFriends] = useState<FriendMarker[]>([]);
+  const [circleMembers, setCircleMembers] = useState<CircleMemberLocation[]>([]);
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -83,29 +83,54 @@ export default function MapScreen() {
     }
   }, [selectedCircle?.id]);
 
-  const handleMarkersLoaded = useCallback((markers: FriendMarker[]) => {
-    setFriends(markers);
+  const handleMembersLoaded = useCallback((members: CircleMemberLocation[]) => {
+    setCircleMembers(members);
   }, []);
 
-  const handleMemberUpdated = useCallback((marker: FriendMarker) => {
-    setFriends((prev) => {
-      const index = prev.findIndex((friend) => friend.id === marker.id);
+  const handleMemberUpdated = useCallback((member: CircleMemberLocation) => {
+    setCircleMembers((prev) => {
+      const index = prev.findIndex((item) => item.id === member.id);
       if (index >= 0) {
         const next = [...prev];
-        next[index] = marker;
+        next[index] = member;
         return next;
       }
-      return [...prev, marker];
+      return [...prev, member];
     });
   }, []);
 
   useCircleLocationRealtime({
     circleId: selectedCircle?.id,
     currentUserId: user?.id,
+    viewerSharing: locationSharingEnabled,
     enabled: Boolean(selectedCircle && user?.id),
-    onMarkersLoaded: handleMarkersLoaded,
+    onMembersLoaded: handleMembersLoaded,
     onMemberUpdated: handleMemberUpdated,
   });
+
+  const mapFriends = useMemo(
+    () => circleMembersToMapMarkers(circleMembers),
+    [circleMembers]
+  );
+
+  const selfMember = useMemo((): CircleMemberLocation | null => {
+    if (!user?.id || !profile) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: getDisplayName(profile),
+      avatar: profile.avatar_url,
+      isSharing: locationSharingEnabled,
+      canViewLocation: locationSharingEnabled && location !== null,
+      latitude: location?.coords.latitude ?? null,
+      longitude: location?.coords.longitude ?? null,
+      battery: profile.battery_level,
+      isCharging: profile.is_charging,
+      lastSeen: profile.last_seen,
+    };
+  }, [user?.id, profile, location, locationSharingEnabled]);
 
   useEffect(() => {
     if (!user?.id || circles.length === 0) return;
@@ -169,16 +194,14 @@ export default function MapScreen() {
     } else {
       setCircles([]);
       setSelectedCircle(null);
-      setFriends([]);
+      setCircleMembers([]);
       setPlaces([]);
     }
   }
 
-  async function loadFriendsLocations(circleId: string) {
-    if (!user?.id) return;
-
-    const markers = await fetchCircleMemberMarkers(circleId, user.id);
-    setFriends(markers);
+  async function loadCircleMembers(circleId: string) {
+    const members = await fetchCircleMembers(circleId, locationSharingEnabled);
+    setCircleMembers(members);
   }
 
   async function loadPlaces(circleId: string) {
@@ -189,18 +212,18 @@ export default function MapScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (selectedCircle) {
-      await loadFriendsLocations(selectedCircle.id);
+      await loadCircleMembers(selectedCircle.id);
     }
     setRefreshing(false);
-  }, [selectedCircle, user?.id]);
+  }, [selectedCircle, locationSharingEnabled]);
 
   const handleSelectCircle = (circle: Circle) => {
     setSelectedCircle(circle);
     setSelectedFriendId(null);
   };
 
-  const handleSelectFriend = (friend: FriendMarker) => {
-    setSelectedFriendId((prev) => (prev === friend.id ? null : friend.id));
+  const handleSelectMember = (member: CircleMemberLocation) => {
+    setSelectedFriendId((prev) => (prev === member.id ? null : member.id));
   };
 
   const mapPlaces = useMemo(() => getMapVisiblePlaces(places), [places]);
@@ -305,18 +328,20 @@ export default function MapScreen() {
 
       <MapPanel
         location={location}
-        friends={friends}
+        friends={mapFriends}
         places={mapPlaces}
         selectedFriendId={selectedFriendId}
       />
 
       <MembersAndPlacesList
-        friends={friends}
+        members={circleMembers}
+        selfMember={selfMember}
         places={places}
         selectedFriendId={selectedFriendId}
+        locationSharingEnabled={locationSharingEnabled}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        onSelectFriend={handleSelectFriend}
+        onSelectMember={handleSelectMember}
         onAddPlace={handleAddPlace}
         onTogglePlaceVisible={handleTogglePlaceVisible}
         onTogglePlaceNotify={handleTogglePlaceNotify}
@@ -326,11 +351,11 @@ export default function MapScreen() {
       <MapSearchModal
         visible={showSearchModal}
         circleName={selectedCircle?.name}
-        friends={friends}
+        friends={mapFriends}
         places={places}
         selectedFriendId={selectedFriendId}
         onClose={() => setShowSearchModal(false)}
-        onSelectFriend={handleSelectFriend}
+        onSelectFriend={(friend) => setSelectedFriendId(friend.id)}
       />
 
       <MapNotificationsModal

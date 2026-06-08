@@ -1,33 +1,34 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import {
-  fetchCircleMemberMarkers,
-  fetchMemberMarkerForUser,
-} from '@/lib/circle-locations';
-import type { FriendMarker } from '@/components/map/types';
+import { fetchCircleMembers, fetchMemberLocationUpdate } from '@/lib/circle-locations';
+import type { CircleMemberLocation } from '@/components/map/types';
 import type { Location } from '@/types/database';
 
-const POLL_INTERVAL_MS = 20_000;
+const POLL_INTERVAL_MS = 15_000;
 
 type UseCircleLocationRealtimeOptions = {
   circleId: string | undefined;
   currentUserId: string | undefined;
+  viewerSharing: boolean;
   enabled: boolean;
-  onMarkersLoaded: (markers: FriendMarker[]) => void;
-  onMemberUpdated: (marker: FriendMarker) => void;
+  onMembersLoaded: (members: CircleMemberLocation[]) => void;
+  onMemberUpdated: (member: CircleMemberLocation) => void;
 };
 
 export function useCircleLocationRealtime({
   circleId,
   currentUserId,
+  viewerSharing,
   enabled,
-  onMarkersLoaded,
+  onMembersLoaded,
   onMemberUpdated,
 }: UseCircleLocationRealtimeOptions) {
   const memberIdsRef = useRef<Set<string>>(new Set());
-  const callbacksRef = useRef({ onMarkersLoaded, onMemberUpdated });
+  const callbacksRef = useRef({ onMembersLoaded, onMemberUpdated });
+  const viewerSharingRef = useRef(viewerSharing);
 
-  callbacksRef.current = { onMarkersLoaded, onMemberUpdated };
+  callbacksRef.current = { onMembersLoaded, onMemberUpdated };
+  viewerSharingRef.current = viewerSharing;
 
   useEffect(() => {
     if (!circleId || !currentUserId || !enabled) {
@@ -54,9 +55,13 @@ export function useCircleLocationRealtime({
       );
       memberIdsRef.current = ids;
 
-      const markers = await fetchCircleMemberMarkers(circleId, currentUserId);
+      const circleMembers = await fetchCircleMembers(
+        circleId,
+        viewerSharingRef.current
+      );
+
       if (!cancelled) {
-        callbacksRef.current.onMarkersLoaded(markers);
+        callbacksRef.current.onMembersLoaded(circleMembers);
       }
     }
 
@@ -77,9 +82,13 @@ export function useCircleLocationRealtime({
             return;
           }
 
-          const marker = await fetchMemberMarkerForUser(row.user_id);
-          if (marker) {
-            callbacksRef.current.onMemberUpdated(marker);
+          const member = await fetchMemberLocationUpdate(
+            row.user_id,
+            viewerSharingRef.current
+          );
+
+          if (member) {
+            callbacksRef.current.onMemberUpdated(member);
           }
         }
       )
@@ -94,5 +103,5 @@ export function useCircleLocationRealtime({
       clearInterval(pollId);
       supabase.removeChannel(channel);
     };
-  }, [circleId, currentUserId, enabled]);
+  }, [circleId, currentUserId, enabled, viewerSharing]);
 }

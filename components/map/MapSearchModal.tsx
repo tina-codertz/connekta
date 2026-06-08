@@ -6,7 +6,7 @@ import { ModalSheet } from '@/components/ui/ModalSheet';
 import { FriendsSearchBar } from '@/components/friends/FriendsSearchBar';
 import { FriendLocationCard } from '@/components/map/FriendLocationCard';
 import { PlaceCard } from '@/components/map/PlaceCard';
-import { FriendMarker } from '@/components/map/types';
+import { CircleMemberLocation, FriendMarker } from '@/components/map/types';
 import { Place } from '@/types/database';
 import { Colors } from '@/lib/theme';
 
@@ -23,6 +23,21 @@ interface MapSearchModalProps {
 type SearchResult =
   | { kind: 'member'; friend: FriendMarker }
   | { kind: 'place'; place: Place };
+
+function friendToMember(friend: FriendMarker): CircleMemberLocation {
+  return {
+    id: friend.id,
+    name: friend.name,
+    avatar: friend.avatar,
+    isSharing: true,
+    canViewLocation: true,
+    latitude: friend.latitude,
+    longitude: friend.longitude,
+    battery: friend.battery,
+    isCharging: friend.isCharging,
+    lastSeen: friend.lastSeen,
+  };
+}
 
 function matchesQuery(text: string | null | undefined, query: string): boolean {
   if (!text) return false;
@@ -96,7 +111,7 @@ export function MapSearchModal({
           renderItem={({ item }) =>
             item.kind === 'member' ? (
               <FriendLocationCard
-                friend={item.friend}
+                member={friendToMember(item.friend)}
                 selected={selectedFriendId === item.friend.id}
                 onPress={() => handleSelectFriend(item.friend)}
               />

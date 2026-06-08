@@ -3,6 +3,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 export default (_context: ConfigContext): ExpoConfig => ({
   name: 'LocateMate',
   slug: 'locatemate',
+  owner: 'christinakimario',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -83,6 +84,9 @@ export default (_context: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
   },
   extra: {
+    eas: {
+      projectId: '0371e981-b7d1-4288-8b8f-463ca0f7df05',
+    },
     mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN,
     mapProvider: process.env.EXPO_PUBLIC_MAP_PROVIDER ?? 'mapbox',
     appInviteUrl: process.env.EXPO_PUBLIC_APP_INVITE_URL,

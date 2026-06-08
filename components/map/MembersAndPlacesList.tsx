@@ -5,17 +5,19 @@ import { Row, Text } from '@/components/ExpoUI';
 import { FriendLocationCard } from './FriendLocationCard';
 import { PlaceCard } from './PlaceCard';
 import { useTabBarInsets } from '@/hooks/useTabBarInsets';
-import { FriendMarker } from './types';
+import { CircleMemberLocation } from './types';
 import { Place } from '@/types/database';
 import { Colors } from '@/lib/theme';
 
 interface MembersAndPlacesListProps {
-  friends: FriendMarker[];
+  members: CircleMemberLocation[];
+  selfMember: CircleMemberLocation | null;
   places: Place[];
   selectedFriendId: string | null;
+  locationSharingEnabled: boolean;
   refreshing: boolean;
   onRefresh: () => void;
-  onSelectFriend: (friend: FriendMarker) => void;
+  onSelectMember: (member: CircleMemberLocation) => void;
   onAddPlace?: () => void;
   onTogglePlaceVisible?: (place: Place) => void;
   onTogglePlaceNotify?: (place: Place) => void;
@@ -23,18 +25,21 @@ interface MembersAndPlacesListProps {
 }
 
 export function MembersAndPlacesList({
-  friends,
+  members,
+  selfMember,
   places,
   selectedFriendId,
+  locationSharingEnabled,
   refreshing,
   onRefresh,
-  onSelectFriend,
+  onSelectMember,
   onAddPlace,
   onTogglePlaceVisible,
   onTogglePlaceNotify,
   onDeletePlace,
 }: MembersAndPlacesListProps) {
   const { contentPaddingBottom } = useTabBarInsets();
+  const memberCount = members.length + (selfMember ? 1 : 0);
 
   return (
     <ScrollView
@@ -49,19 +54,37 @@ export function MembersAndPlacesList({
       }
       showsVerticalScrollIndicator={false}
     >
+      {!locationSharingEnabled ? (
+        <Text textStyle={styles.sharingHint}>
+          Location sharing is off. Turn it on in Settings so your circle can see you.
+        </Text>
+      ) : null}
+
       <Row spacing={8} alignment="center" style={styles.header}>
         <Text textStyle={styles.sectionTitle}>Circle Members</Text>
-        <Text textStyle={styles.count}>{friends.length + 1} people</Text>
+        <Text textStyle={styles.count}>{memberCount} people</Text>
       </Row>
 
-      {friends.map((friend) => (
+      {selfMember ? (
+        <FriendLocationCard member={selfMember} selected={false} isSelf />
+      ) : null}
+
+      {members.map((member) => (
         <FriendLocationCard
-          key={friend.id}
-          friend={friend}
-          selected={selectedFriendId === friend.id}
-          onPress={() => onSelectFriend(friend)}
+          key={member.id}
+          member={member}
+          selected={selectedFriendId === member.id}
+          onPress={
+            member.canViewLocation ? () => onSelectMember(member) : undefined
+          }
         />
       ))}
+
+      {members.length === 0 ? (
+        <Text textStyle={styles.emptyMembers}>
+          Invite friends to your circle to share locations with each other.
+        </Text>
+      ) : null}
 
       <Row spacing={8} alignment="center" style={styles.placesHeader}>
         <Text textStyle={styles.placesTitle}>Places</Text>
@@ -105,6 +128,18 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
   },
+  sharingHint: {
+    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.primary[300],
+    backgroundColor: Colors.primary[900],
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.primary[700],
+  },
   header: {
     justifyContent: 'space-between',
     marginBottom: 16,
@@ -117,6 +152,12 @@ const styles = StyleSheet.create({
   count: {
     fontSize: 14,
     color: Colors.neutral[500],
+  },
+  emptyMembers: {
+    fontSize: 14,
+    color: Colors.neutral[500],
+    marginBottom: 8,
+    lineHeight: 20,
   },
   placesHeader: {
     justifyContent: 'space-between',

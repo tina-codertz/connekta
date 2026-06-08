@@ -68,7 +68,7 @@ export default function SignInScreen() {
               </LinearGradient>
             </View>
             <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
-              Connekta
+              LocateMe
             </Text>
             <Text textStyle={{ fontSize: 16, color: Colors.neutral[400] }}>
               Stay connected with your circle

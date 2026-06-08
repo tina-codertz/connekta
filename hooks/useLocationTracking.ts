@@ -9,7 +9,7 @@ import {
 } from '@/lib/location-upload';
 import type { LocationObject } from '@/lib/location';
 
-const UPLOAD_INTERVAL_MS = 10_000;
+const UPLOAD_INTERVAL_MS = 8_000;
 
 const WATCH_OPTIONS: ExpoLocation.LocationOptions = {
   accuracy: ExpoLocation.Accuracy.Balanced,

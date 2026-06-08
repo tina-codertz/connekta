@@ -6,5 +6,18 @@ export interface FriendMarker {
   battery: number | null;
   isCharging: boolean;
   lastSeen: string;
-  avatar?: string;
+  avatar?: string | null;
+}
+
+export interface CircleMemberLocation {
+  id: string;
+  name: string;
+  avatar?: string | null;
+  isSharing: boolean;
+  canViewLocation: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  battery: number | null;
+  isCharging: boolean;
+  lastSeen: string | null;
 }
