@@ -1,11 +1,26 @@
 import 'react-native-url-polyfill/auto';
 import { AppState, Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
 import { authStorage, AUTH_STORAGE_KEY } from './auth-storage';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const extra = Constants.expoConfig?.extra ?? {};
+
+const supabaseUrl =
+  (typeof extra.supabaseUrl === 'string' && extra.supabaseUrl) ||
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  '';
+const supabaseAnonKey =
+  (typeof extra.supabaseAnonKey === 'string' && extra.supabaseAnonKey) ||
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in EAS env or .env before building.'
+  );
+}
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

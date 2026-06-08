@@ -87,6 +87,8 @@ export default (_context: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: '0371e981-b7d1-4288-8b8f-463ca0f7df05',
     },
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN,
     mapProvider: process.env.EXPO_PUBLIC_MAP_PROVIDER ?? 'mapbox',
     appInviteUrl: process.env.EXPO_PUBLIC_APP_INVITE_URL,

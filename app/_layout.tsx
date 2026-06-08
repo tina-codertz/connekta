@@ -1,5 +1,7 @@
+import 'react-native-gesture-handler';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Constants from 'expo-constants';
 import { Host } from '@/components/ExpoUI';
 import { Stack } from 'expo-router';
@@ -8,7 +10,6 @@ import { initNativeMapbox } from '@/lib/mapbox-native';
 import { setupAuthSessionRefresh } from '@/lib/supabase';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
@@ -91,12 +92,14 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-        <StatusBar style="light" />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+          <StatusBar style="light" />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
