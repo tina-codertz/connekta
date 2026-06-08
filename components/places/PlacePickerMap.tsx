@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Text } from '@/components/ExpoUI';
@@ -8,35 +8,55 @@ import { formatCoordinates } from '@/lib/places';
 import { Colors } from '@/lib/theme';
 
 interface PlacePickerMapProps {
-  initialLatitude?: number | null;
-  initialLongitude?: number | null;
-  onCenterChange: (latitude: number, longitude: number) => void;
+  latitude: number;
+  longitude: number;
+  previewOnly?: boolean;
+  height?: number;
+  onCenterChange?: (latitude: number, longitude: number) => void;
 }
 
 export function PlacePickerMap({
-  initialLatitude,
-  initialLongitude,
+  latitude,
+  longitude,
+  previewOnly = false,
+  height = 200,
   onCenterChange,
 }: PlacePickerMapProps) {
+  const webViewRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [centerLabel, setCenterLabel] = useState('Move the map to choose a location');
+  const [centerLabel, setCenterLabel] = useState(formatCoordinates(latitude, longitude));
+
+  const mapKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}-${previewOnly ? 'preview' : 'pick'}`;
 
   const html = useMemo(() => {
     if (!isMapboxConfigured()) {
       return '';
     }
 
-    const hasCoords =
-      typeof initialLatitude === 'number' && typeof initialLongitude === 'number';
-
     return buildPlacePickerHtml(
       mapConfig.accessToken,
-      hasCoords
-        ? { latitude: initialLatitude, longitude: initialLongitude }
-        : null
+      { latitude, longitude },
+      previewOnly
     );
-  }, [initialLatitude, initialLongitude]);
+  }, [mapKey, latitude, longitude, previewOnly]);
+
+  useEffect(() => {
+    setCenterLabel(formatCoordinates(latitude, longitude));
+    if (!ready || previewOnly) {
+      return;
+    }
+
+    const script = `
+      (function () {
+        if (window.setPickerLocation) {
+          window.setPickerLocation({ latitude: ${latitude}, longitude: ${longitude} });
+        }
+      })();
+      true;
+    `;
+    webViewRef.current?.injectJavaScript(script);
+  }, [latitude, longitude, ready, previewOnly]);
 
   function handleMessage(event: WebViewMessageEvent) {
     try {
@@ -51,11 +71,11 @@ export function PlacePickerMap({
         setError(message.message || 'Map failed to load');
       }
 
-      if (message.type === 'center') {
-        const latitude = Number(message.latitude);
-        const longitude = Number(message.longitude);
-        onCenterChange(latitude, longitude);
-        setCenterLabel(formatCoordinates(latitude, longitude));
+      if (message.type === 'center' && !previewOnly) {
+        const nextLatitude = Number(message.latitude);
+        const nextLongitude = Number(message.longitude);
+        onCenterChange?.(nextLatitude, nextLongitude);
+        setCenterLabel(formatCoordinates(nextLatitude, nextLongitude));
       }
     } catch {
       // Ignore malformed messages.
@@ -64,28 +84,19 @@ export function PlacePickerMap({
 
   if (!isMapboxConfigured()) {
     return (
-      <View style={styles.fallback}>
+      <View style={[styles.fallback, { height }]}>
         <Text textStyle={styles.fallbackText}>
-          Add EXPO_PUBLIC_MAPBOX_TOKEN to pick a place on the map.
+          Add EXPO_PUBLIC_MAPBOX_TOKEN to show this place on the map.
         </Text>
       </View>
     );
   }
 
-  if (
-    typeof initialLatitude !== 'number' ||
-    typeof initialLongitude !== 'number'
-  ) {
-    return (
-      <View style={styles.fallback}>
-        <Text textStyle={styles.fallbackText}>Waiting for your location...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height }]}>
       <WebView
+        key={mapKey}
+        ref={webViewRef}
         originWhitelist={['*']}
         source={{ html }}
         style={styles.webview}
@@ -113,7 +124,7 @@ export function PlacePickerMap({
 
 const styles = StyleSheet.create({
   container: {
-    height: 220,
+    height: 200,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#E5E7EB',
@@ -140,7 +151,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fallback: {
-    height: 220,
+    height: 200,
     borderRadius: 16,
     backgroundColor: Colors.neutral[900],
     borderWidth: 1,

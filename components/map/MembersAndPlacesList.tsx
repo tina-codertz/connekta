@@ -16,6 +16,9 @@ interface MembersAndPlacesListProps {
   onRefresh: () => void;
   onSelectFriend: (friend: FriendMarker) => void;
   onAddPlace?: () => void;
+  onTogglePlaceVisible?: (place: Place) => void;
+  onTogglePlaceNotify?: (place: Place) => void;
+  onDeletePlace?: (place: Place) => void;
 }
 
 export function MembersAndPlacesList({
@@ -26,6 +29,9 @@ export function MembersAndPlacesList({
   onRefresh,
   onSelectFriend,
   onAddPlace,
+  onTogglePlaceVisible,
+  onTogglePlaceNotify,
+  onDeletePlace,
 }: MembersAndPlacesListProps) {
   return (
     <ScrollView
@@ -77,7 +83,15 @@ export function MembersAndPlacesList({
           </Text>
         </TouchableOpacity>
       ) : (
-        places.map((place) => <PlaceCard key={place.id} place={place} />)
+        places.map((place) => (
+          <PlaceCard
+            key={place.id}
+            place={place}
+            onToggleVisible={onTogglePlaceVisible}
+            onToggleNotify={onTogglePlaceNotify}
+            onDelete={onDeletePlace}
+          />
+        ))
       )}
     </ScrollView>
   );

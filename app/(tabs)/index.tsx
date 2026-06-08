@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Alert, Text as RNText } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -19,6 +19,12 @@ import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
 import { SosAlertBanner } from '@/components/sos/SosAlertBanner';
 import { FriendMarker } from '@/components/map/types';
 import { getUnreadAlertCount } from '@/lib/alerts';
+import {
+  deletePlace,
+  getMapVisiblePlaces,
+  isPlaceVisibleOnMap,
+  updatePlaceSettings,
+} from '@/lib/places';
 import { getDisplayName } from '@/lib/profile';
 
 export default function MapScreen() {
@@ -26,6 +32,12 @@ export default function MapScreen() {
   const { user, profile } = useAuth();
   const locationSharingEnabled = profile?.is_location_enabled ?? true;
   const { location } = useLocationTracking(user?.id, locationSharingEnabled);
+
+  const [friends, setFriends] = useState<FriendMarker[]>([]);
+  const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
+  const [circles, setCircles] = useState<Circle[]>([]);
+  const [places, setPlaces] = useState<Place[]>([]);
+
   usePlaceGeofencing(
     user?.id,
     profile,
@@ -33,11 +45,6 @@ export default function MapScreen() {
     locationSharingEnabled,
     places.length
   );
-
-  const [friends, setFriends] = useState<FriendMarker[]>([]);
-  const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
-  const [circles, setCircles] = useState<Circle[]>([]);
-  const [places, setPlaces] = useState<Place[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [activeSosAlert, setActiveSosAlert] = useState<{
@@ -202,6 +209,51 @@ export default function MapScreen() {
     setSelectedFriendId((prev) => (prev === friend.id ? null : friend.id));
   };
 
+  const mapPlaces = useMemo(() => getMapVisiblePlaces(places), [places]);
+
+  async function handleTogglePlaceVisible(place: Place) {
+    const { data, error } = await updatePlaceSettings(place.id, {
+      visible_on_map: !isPlaceVisibleOnMap(place),
+    });
+
+    if (error || !data) {
+      Alert.alert('Error', error?.message || 'Could not update place.');
+      return;
+    }
+
+    if (selectedCircle) {
+      await loadPlaces(selectedCircle.id);
+    }
+  }
+
+  async function handleTogglePlaceNotify(place: Place) {
+    const { data, error } = await updatePlaceSettings(place.id, {
+      notifications_enabled: !place.notifications_enabled,
+    });
+
+    if (error || !data) {
+      Alert.alert('Error', error?.message || 'Could not update place.');
+      return;
+    }
+
+    if (selectedCircle) {
+      await loadPlaces(selectedCircle.id);
+    }
+  }
+
+  async function handleDeletePlace(place: Place) {
+    const { error } = await deletePlace(place.id);
+
+    if (error) {
+      Alert.alert('Error', error?.message || 'Could not remove place.');
+      return;
+    }
+
+    if (selectedCircle) {
+      await loadPlaces(selectedCircle.id);
+    }
+  }
+
   const handleAddPlace = () => {
     if (!selectedCircle) {
       Alert.alert('No circle', 'Create or join a circle before adding a place.');
@@ -260,7 +312,7 @@ export default function MapScreen() {
       <MapPanel
         location={location}
         friends={friends}
-        places={places}
+        places={mapPlaces}
         selectedFriendId={selectedFriendId}
       />
 
@@ -272,6 +324,9 @@ export default function MapScreen() {
         onRefresh={onRefresh}
         onSelectFriend={handleSelectFriend}
         onAddPlace={handleAddPlace}
+        onTogglePlaceVisible={handleTogglePlaceVisible}
+        onTogglePlaceNotify={handleTogglePlaceNotify}
+        onDeletePlace={handleDeletePlace}
       />
 
       <MapSearchModal

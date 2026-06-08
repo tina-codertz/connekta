@@ -58,6 +58,45 @@ export async function loadUserPlaces(userId: string): Promise<Place[]> {
   return data;
 }
 
+export function isPlaceVisibleOnMap(place: Place): boolean {
+  return place.visible_on_map ?? true;
+}
+
+export function getMapVisiblePlaces(places: Place[]): Place[] {
+  return places.filter(isPlaceVisibleOnMap);
+}
+
+export async function deletePlace(placeId: string): Promise<{ error: Error | null }> {
+  const { error } = await supabase.from('places').delete().eq('id', placeId);
+
+  if (error) {
+    return { error: new Error(error.message) };
+  }
+
+  return { error: null };
+}
+
+export async function updatePlaceSettings(
+  placeId: string,
+  settings: {
+    visible_on_map?: boolean;
+    notifications_enabled?: boolean;
+  }
+): Promise<{ data: Place | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from('places')
+    .update(settings)
+    .eq('id', placeId)
+    .select('*')
+    .single();
+
+  if (error) {
+    return { data: null, error: new Error(error.message) };
+  }
+
+  return { data: data as Place, error: null };
+}
+
 export async function createPlace(options: {
   circleId: string;
   name: string;
@@ -66,6 +105,8 @@ export async function createPlace(options: {
   radius?: number;
   address?: string | null;
   createdBy: string;
+  visibleOnMap?: boolean;
+  notificationsEnabled?: boolean;
 }): Promise<{ data: Place | null; error: Error | null }> {
   const trimmedName = options.name.trim();
   if (!trimmedName) {
@@ -82,7 +123,8 @@ export async function createPlace(options: {
       radius: options.radius ?? 100,
       address: options.address ?? null,
       created_by: options.createdBy,
-      notifications_enabled: true,
+      notifications_enabled: options.notificationsEnabled ?? true,
+      visible_on_map: options.visibleOnMap ?? true,
     })
     .select('*')
     .single();

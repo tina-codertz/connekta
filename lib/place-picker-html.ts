@@ -1,8 +1,10 @@
 import { getMapboxGlStyleUrl } from './map-config';
+import { TANZANIA_REGION } from './region-config';
 
 export function buildPlacePickerHtml(
   accessToken: string,
-  initial?: { latitude: number; longitude: number } | null
+  initial?: { latitude: number; longitude: number } | null,
+  previewOnly = false
 ): string {
   const styleUrl = getMapboxGlStyleUrl();
   const initialPayload = initial ?? null;
@@ -31,6 +33,21 @@ export function buildPlacePickerHtml(
         pointer-events: none;
         z-index: 3;
       }
+      #marker {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 18px;
+        height: 18px;
+        margin: -18px 0 0 -9px;
+        background: #EF4444;
+        border: 3px solid white;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        pointer-events: none;
+        z-index: 3;
+      }
       #hint {
         position: absolute;
         left: 12px;
@@ -48,14 +65,15 @@ export function buildPlacePickerHtml(
     </style>
   </head>
   <body>
-    <div id="crosshair"></div>
-    <div id="hint">Move the map to position the pin</div>
+    <div id="${previewOnly ? 'marker' : 'crosshair'}"></div>
+    <div id="hint">${previewOnly ? 'Selected location' : 'Move the map to position the pin'}</div>
     <div id="map"></div>
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
     <script>
       const initialPayload = ${JSON.stringify(initialPayload)};
       const styleUrl = ${JSON.stringify(styleUrl)};
       const accessToken = ${JSON.stringify(accessToken)};
+      const previewOnly = ${JSON.stringify(previewOnly)};
 
       let map = null;
 
@@ -66,7 +84,7 @@ export function buildPlacePickerHtml(
       }
 
       function postCenter() {
-        if (!map) return;
+        if (!map || previewOnly) return;
         const center = map.getCenter();
         postHostMessage({
           type: 'center',
@@ -74,6 +92,23 @@ export function buildPlacePickerHtml(
           longitude: center.lng,
         });
       }
+
+      function flyToLocation(payload) {
+        if (!map || !payload) return;
+        map.flyTo({
+          center: [payload.longitude, payload.latitude],
+          zoom: 16,
+          duration: 600,
+        });
+      }
+
+      window.setPickerLocation = function setPickerLocation(payload) {
+        if (!map) {
+          window.__pendingLocation = payload;
+          return;
+        }
+        flyToLocation(payload);
+      };
 
       function bootMap(attempts) {
         if (!window.mapboxgl) {
@@ -87,24 +122,42 @@ export function buildPlacePickerHtml(
 
         try {
           mapboxgl.accessToken = accessToken;
+          const fallback = ${JSON.stringify(TANZANIA_REGION.center)};
           const start = initialPayload
             ? [initialPayload.longitude, initialPayload.latitude]
-            : [0, 20];
+            : [fallback.longitude, fallback.latitude];
 
           map = new mapboxgl.Map({
             container: 'map',
             style: styleUrl,
             center: start,
-            zoom: initialPayload ? 15 : 2,
+            zoom: initialPayload ? 16 : 6,
             attributionControl: true,
+            interactive: !previewOnly,
           });
 
+          if (previewOnly) {
+            map.dragPan.disable();
+            map.scrollZoom.disable();
+            map.boxZoom.disable();
+            map.doubleClickZoom.disable();
+            map.touchZoomRotate.disable();
+          }
+
           map.on('load', function () {
-            postCenter();
+            if (!previewOnly) {
+              postCenter();
+            }
+            if (window.__pendingLocation) {
+              flyToLocation(window.__pendingLocation);
+              window.__pendingLocation = null;
+            }
             postHostMessage({ type: 'ready' });
           });
 
-          map.on('moveend', postCenter);
+          if (!previewOnly) {
+            map.on('moveend', postCenter);
+          }
 
           map.on('error', function (event) {
             const message = (event && event.error && event.error.message) || 'Map failed to load';

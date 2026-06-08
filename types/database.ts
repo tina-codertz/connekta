@@ -120,6 +120,7 @@ export interface Database {
           icon: string;
           color: string;
           notifications_enabled: boolean;
+          visible_on_map: boolean;
           created_by: string | null;
           created_at: string;
         };
@@ -134,6 +135,7 @@ export interface Database {
           icon?: string;
           color?: string;
           notifications_enabled?: boolean;
+          visible_on_map?: boolean;
           created_by?: string | null;
           created_at?: string;
         };
@@ -148,6 +150,7 @@ export interface Database {
           icon?: string;
           color?: string;
           notifications_enabled?: boolean;
+          visible_on_map?: boolean;
           created_by?: string | null;
           created_at?: string;
         };
