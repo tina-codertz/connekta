@@ -7,28 +7,50 @@ import { authStorage, AUTH_STORAGE_KEY } from './auth-storage';
 
 const extra = Constants.expoConfig?.extra ?? {};
 
-const supabaseUrl =
-  (typeof extra.supabaseUrl === 'string' && extra.supabaseUrl) ||
-  process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  '';
-const supabaseAnonKey =
-  (typeof extra.supabaseAnonKey === 'string' && extra.supabaseAnonKey) ||
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  '';
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in EAS env or .env before building.'
-  );
+function getSupabaseConfig() {
+  const supabaseUrl =
+    (typeof extra.supabaseUrl === 'string' && extra.supabaseUrl) ||
+    process.env.EXPO_PUBLIC_SUPABASE_URL ||
+    '';
+  const supabaseAnonKey =
+    (typeof extra.supabaseAnonKey === 'string' && extra.supabaseAnonKey) ||
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+    '';
+  return { supabaseUrl, supabaseAnonKey };
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: authStorage,
-    storageKey: AUTH_STORAGE_KEY,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
+let supabaseClient: ReturnType<typeof createClient<Database>> | null = null;
+
+function getSupabaseClient() {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in EAS env or .env before building.'
+    );
+  }
+
+  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      storage: authStorage,
+      storageKey: AUTH_STORAGE_KEY,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  });
+
+  return supabaseClient;
+}
+
+export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(_target, prop, receiver) {
+    const client = getSupabaseClient();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === 'function' ? value.bind(client) : value;
   },
 });
 

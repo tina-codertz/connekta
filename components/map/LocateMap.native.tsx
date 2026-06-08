@@ -1,4 +1,5 @@
 import React, { forwardRef, useMemo } from 'react';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { canUseNativeMapbox } from '@/lib/mapbox-native';
 import { isMapboxConfigured } from '@/lib/map-config';
@@ -19,7 +20,8 @@ interface LocateMapProps {
 }
 
 function loadNativeMapboxMap() {
-  if (!canUseNativeMapbox()) {
+  // Native Mapbox SDK can crash on some Android release builds; WebView is more stable.
+  if (Platform.OS === 'android' || !canUseNativeMapbox()) {
     return null;
   }
 

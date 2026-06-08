@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { MapPin, Users, User, Settings } from 'lucide-react-native';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SystemUI from 'expo-system-ui';
@@ -18,7 +18,7 @@ export const unstable_settings = {
 };
 
 export default function TabLayout() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
   const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + bottomInset;
@@ -26,10 +26,6 @@ export default function TabLayout() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(TAB_BAR_BACKGROUND);
   }, []);
-
-  if (loading) {
-    return null;
-  }
 
   if (!user) {
     return <Redirect href="/(auth)" />;
@@ -41,6 +37,10 @@ export default function TabLayout() {
         initialRouteName="index"
         screenOptions={{
           headerShown: false,
+          lazy: true,
+          freezeOnBlur: true,
+          detachInactiveScreens: true,
+          animation: Platform.OS === 'android' ? 'none' : 'shift',
           sceneContainerStyle: styles.scene,
           tabBarBackground: () => <TabBarBackground />,
           tabBarStyle: {
@@ -136,21 +136,14 @@ type TabBarIconProps = {
 
 function TabBarIcon({ focused, color, size, Icon }: TabBarIconProps) {
   return (
-    <Pressable style={styles.iconPressable}>
-      {({ pressed, hovered }) => {
-        const highlighted =
-          focused || pressed || (Platform.OS === 'web' && hovered);
-
-        return (
-          <View style={[styles.iconContainer, highlighted && styles.iconContainerActive]}>
-            <Icon
-              size={size}
-              color={highlighted ? Colors.primary[400] : color}
-              strokeWidth={highlighted ? 2.5 : 2}
-            />
-          </View>
-        );
-      }}
-    </Pressable>
+    <View style={styles.iconPressable}>
+      <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+        <Icon
+          size={size}
+          color={focused ? Colors.primary[400] : color}
+          strokeWidth={focused ? 2.5 : 2}
+        />
+      </View>
+    </View>
   );
 }

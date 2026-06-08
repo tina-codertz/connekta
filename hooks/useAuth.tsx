@@ -31,31 +31,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
-      if (!active) return;
-
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-
-      if (nextSession?.user) {
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          await fetchProfile(nextSession.user);
-        } else if (event === 'TOKEN_REFRESHED') {
-          setLoading(false);
-        }
-      } else {
-        setProfile(null);
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
-          setLoading(false);
-        }
+    const loadingTimeout = setTimeout(() => {
+      if (active) {
+        setLoading(false);
       }
-    });
+    }, 8000);
+
+    let subscription: { unsubscribe: () => void } | undefined;
+
+    try {
+      const { data } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+        if (!active) return;
+
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        if (nextSession?.user) {
+          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            if (event === 'INITIAL_SESSION') {
+              setLoading(false);
+            }
+            void fetchProfile(nextSession.user);
+          } else if (event === 'TOKEN_REFRESHED') {
+            setLoading(false);
+          }
+        } else {
+          setProfile(null);
+          if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
+            setLoading(false);
+          }
+        }
+      });
+      subscription = data.subscription;
+    } catch (error) {
+      console.warn('Auth initialization failed:', error);
+      setLoading(false);
+    }
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+      clearTimeout(loadingTimeout);
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -137,9 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function fetchProfile(authUser: User) {
-    const resolved = await ensureProfile(authUser);
-    setProfile(resolved);
-    setLoading(false);
+    try {
+      const resolved = await ensureProfile(authUser);
+      setProfile(resolved);
+    } catch (error) {
+      console.warn('Failed to load profile:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signUp(email: string, password: string, fullName: string) {

@@ -28,6 +28,16 @@ function RootLayoutNav() {
 
   usePushNotifications(user?.id, locationSharingEnabled);
 
+  useEffect(() => {
+    if (Platform.OS === 'web' || Constants.appOwnership === 'expo' || !user) {
+      return;
+    }
+
+    import('@/lib/background-location-task').catch((error) => {
+      console.warn('Background location task unavailable:', error);
+    });
+  }, [user?.id]);
+
   if (loading) {
     return (
       <Host style={{ flex: 1 }}>
@@ -77,13 +87,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     setupAuthSessionRefresh();
-    if (Platform.OS !== 'web') {
-      initNativeMapbox();
-    }
-
-    // Background location only works in a custom dev/production build, not Expo Go.
-    if (Platform.OS !== 'web' && Constants.appOwnership !== 'expo') {
-      import('@/lib/background-location-task');
+    if (Platform.OS === 'ios') {
+      initNativeMapbox().catch((error) => {
+        console.warn('Mapbox native init failed:', error);
+      });
     }
   }, []);
 
