@@ -11,13 +11,7 @@ export function isMapboxConfigured(): boolean {
   return mapConfig.provider === 'mapbox' && mapConfig.accessToken.length > 0;
 }
 
-/** Raster tile URL for react-native-maps UrlTile overlay */
-export function getMapboxTileUrl(): string {
-  const token = encodeURIComponent(mapConfig.accessToken);
-  return `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/tiles/256/{z}/{x}/{y}@2x?access_token=${token}`;
-}
-
-/** Mapbox GL style URL for web */
+/** Mapbox GL style URL for native SDK and web */
 export function getMapboxStyleUrl(): string {
   return `mapbox://styles/${MAPBOX_STYLE}`;
 }

@@ -1,8 +1,5 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { getMapboxStyleUrl, isMapboxConfigured, mapConfig } from '@/lib/map-config';
-import { buildMapMarkers, buildMapboxMapHtml } from '@/lib/mapbox-webview-html';
+import React, { forwardRef } from 'react';
+import { isNativeMapboxAvailable } from '@/lib/mapbox-native';
 import type { LocationObject } from '@/lib/location';
 import { FriendMarker } from './types';
 import { Place } from '@/types/database';
@@ -18,64 +15,22 @@ interface LocateMapProps {
   selectedFriendId: string | null;
 }
 
+const NativeMapboxMap = isNativeMapboxAvailable()
+  ? require('./NativeMapboxMap').NativeMapboxMap
+  : null;
+
 export const LocateMap = forwardRef<LocateMapHandle, LocateMapProps>(function LocateMap(
-  { location, friends, places, selectedFriendId },
+  props,
   ref
 ) {
-  const webViewRef = useRef<WebView>(null);
-
-  const html = useMemo(() => {
-    if (!location || !isMapboxConfigured()) return '';
-
-    return buildMapboxMapHtml({
-      accessToken: mapConfig.accessToken,
-      styleUrl: getMapboxStyleUrl(),
-      center: {
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-      },
-      markers: buildMapMarkers(location, friends, places, selectedFriendId),
-    });
-  }, [location, friends, places, selectedFriendId]);
-
-  useImperativeHandle(ref, () => ({
-    zoomIn: () => webViewRef.current?.injectJavaScript('window.zoomIn(); true;'),
-    zoomOut: () => webViewRef.current?.injectJavaScript('window.zoomOut(); true;'),
-    recenter: () => webViewRef.current?.injectJavaScript('window.recenter(); true;'),
-  }));
-
-  if (!isMapboxConfigured()) {
-    return <MapFallback location={location} message="Add EXPO_PUBLIC_MAPBOX_TOKEN to your .env file" />;
-  }
-
-  if (!location || !html) {
-    return <MapFallback location={null} message="Waiting for location..." />;
-  }
-
-  return (
-    <View style={styles.container}>
-      <WebView
-        ref={webViewRef}
-        source={{ html }}
-        style={styles.webview}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        javaScriptEnabled
-        domStorageEnabled
-        originWhitelist={['*']}
-        setSupportMultipleWindows={false}
+  if (!NativeMapboxMap) {
+    return (
+      <MapFallback
+        location={props.location}
+        message="Native Mapbox requires a development build. Run: npx expo run:android or npx expo run:ios (Expo Go is not supported)."
       />
-    </View>
-  );
-});
+    );
+  }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-  },
+  return <NativeMapboxMap ref={ref} {...props} />;
 });

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { initNativeMapbox } from '@/lib/mapbox-native';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
@@ -50,6 +52,12 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      initNativeMapbox();
+    }
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return null;

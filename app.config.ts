@@ -10,6 +10,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   newArchEnabled: true,
   ios: {
+    bundleIdentifier: 'com.christinakimario.locatemate',
     supportsTablet: true,
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
@@ -21,6 +22,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
+    package: 'com.christinakimario.locatemate',
     adaptiveIcon: {
       foregroundImage: './assets/images/icon.png',
       backgroundColor: '#0F172A',
@@ -36,6 +38,12 @@ export default (_context: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-web-browser',
+    [
+      '@rnmapbox/maps',
+      {
+        RNMapboxMapsVersion: '11.20.1',
+      },
+    ],
     [
       'expo-location',
       {
