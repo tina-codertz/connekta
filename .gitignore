@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.npm-cache
 
 # expo
 .expo/
@@ -30,7 +31,7 @@ yarn-error.*
 # local env files
 .env*.local
 .env
-.npm-cache
+
 
 # typescript
 *.tsbuildinfo
