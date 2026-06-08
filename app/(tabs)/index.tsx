@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Alert, Text as RNText } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { Colors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
-import { Circle, Place } from '@/types/database';
+import { Alert as SosAlert, Circle, Place } from '@/types/database';
 import { MapHeader } from '@/components/map/MapHeader';
 import { CircleSelector } from '@/components/map/CircleSelector';
 import { MapPanel } from '@/components/map/MapPanel';
 import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
+import { SosAlertBanner } from '@/components/sos/SosAlertBanner';
 import { FriendMarker } from '@/components/map/types';
 import { getDisplayName } from '@/lib/profile';
 
@@ -25,6 +27,10 @@ export default function MapScreen() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [activeSosAlert, setActiveSosAlert] = useState<{
+    senderName: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -36,6 +42,46 @@ export default function MapScreen() {
       loadFriendsLocations(selectedCircle.id);
     }
   }, [selectedCircle?.id, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || circles.length === 0) return;
+
+    const circleIds = circles.map((circle) => circle.id);
+
+    const channel = supabase
+      .channel(`sos-alerts-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'alerts',
+        },
+        async (payload) => {
+          const alert = payload.new as SosAlert;
+          if (alert.type !== 'sos' || alert.user_id === user.id) return;
+          if (!circleIds.includes(alert.circle_id)) return;
+
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', alert.user_id)
+            .maybeSingle();
+
+          setActiveSosAlert({
+            senderName: getDisplayName(senderProfile),
+            message: alert.message || 'Sent an SOS alert',
+          });
+
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, circles]);
 
   async function loadInitialData() {
     if (!user?.id) return;
@@ -149,6 +195,14 @@ export default function MapScreen() {
         <RNText style={styles.noCirclesHint}>
           No circles yet. Tap + to create or join one.
         </RNText>
+      ) : null}
+
+      {activeSosAlert ? (
+        <SosAlertBanner
+          senderName={activeSosAlert.senderName}
+          message={activeSosAlert.message}
+          onDismiss={() => setActiveSosAlert(null)}
+        />
       ) : null}
 
       <MapPanel

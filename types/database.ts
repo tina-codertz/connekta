@@ -315,6 +315,17 @@ export interface Database {
         Args: { p_user_id: string };
         Returns: boolean;
       };
+      send_sos_alert: {
+        Args: {
+          p_latitude?: number | null;
+          p_longitude?: number | null;
+        };
+        Returns: {
+          circles_notified: number;
+          members_notified: number;
+          message: string;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;

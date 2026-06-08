@@ -1,12 +1,19 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from '@/components/LinearGradient';
 import { Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
 export function SosButton() {
+  const router = useRouter();
+
   return (
-    <TouchableOpacity style={styles.button}>
+    <TouchableOpacity
+      style={styles.button}
+      onPress={() => router.push('/sos')}
+      accessibilityLabel="Open emergency SOS"
+    >
       <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.gradient}>
         <Text textStyle={styles.label}>SOS</Text>
       </LinearGradient>
