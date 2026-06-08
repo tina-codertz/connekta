@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initNativeMapbox } from '@/lib/mapbox-native';
 import { setupAuthSessionRefresh } from '@/lib/supabase';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -19,7 +21,10 @@ import * as SplashScreen from 'expo-splash-screen';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { loading, user } = useAuth();
+  const { loading, user, profile } = useAuth();
+  const locationSharingEnabled = profile?.is_location_enabled ?? true;
+
+  usePushNotifications(user?.id, locationSharingEnabled);
 
   if (loading) {
     return (
@@ -67,6 +72,11 @@ export default function RootLayout() {
     setupAuthSessionRefresh();
     if (Platform.OS !== 'web') {
       initNativeMapbox();
+    }
+
+    // Background location only works in a custom dev/production build, not Expo Go.
+    if (Platform.OS !== 'web' && Constants.appOwnership !== 'expo') {
+      import('@/lib/background-location-task');
     }
   }, []);
 

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { useCircleLocationRealtime } from '@/hooks/useCircleLocationRealtime';
 import { usePlaceGeofencing } from '@/hooks/usePlaceGeofencing';
 import { AddPlaceModal } from '@/components/places/AddPlaceModal';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
@@ -25,6 +26,7 @@ import {
   isPlaceVisibleOnMap,
   updatePlaceSettings,
 } from '@/lib/places';
+import { fetchCircleMemberMarkers } from '@/lib/circle-locations';
 import { getDisplayName } from '@/lib/profile';
 
 export default function MapScreen() {
@@ -78,9 +80,32 @@ export default function MapScreen() {
   useEffect(() => {
     if (selectedCircle) {
       loadPlaces(selectedCircle.id);
-      loadFriendsLocations(selectedCircle.id);
     }
-  }, [selectedCircle?.id, user?.id]);
+  }, [selectedCircle?.id]);
+
+  const handleMarkersLoaded = useCallback((markers: FriendMarker[]) => {
+    setFriends(markers);
+  }, []);
+
+  const handleMemberUpdated = useCallback((marker: FriendMarker) => {
+    setFriends((prev) => {
+      const index = prev.findIndex((friend) => friend.id === marker.id);
+      if (index >= 0) {
+        const next = [...prev];
+        next[index] = marker;
+        return next;
+      }
+      return [...prev, marker];
+    });
+  }, []);
+
+  useCircleLocationRealtime({
+    circleId: selectedCircle?.id,
+    currentUserId: user?.id,
+    enabled: Boolean(selectedCircle && user?.id),
+    onMarkersLoaded: handleMarkersLoaded,
+    onMemberUpdated: handleMemberUpdated,
+  });
 
   useEffect(() => {
     if (!user?.id || circles.length === 0) return;
@@ -103,19 +128,23 @@ export default function MapScreen() {
 
           refreshUnreadCount();
 
-          if (alert.type === 'sos') {
-            const { data: senderProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', alert.user_id)
-              .maybeSingle();
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', alert.user_id)
+            .maybeSingle();
 
+          const senderName = getDisplayName(senderProfile);
+
+          if (alert.type === 'sos') {
             setActiveSosAlert({
-              senderName: getDisplayName(senderProfile),
+              senderName,
               message: alert.message || 'Sent an SOS alert',
             });
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         }
       )
@@ -148,43 +177,8 @@ export default function MapScreen() {
   async function loadFriendsLocations(circleId: string) {
     if (!user?.id) return;
 
-    const { data: members } = await supabase
-      .from('circle_members')
-      .select('*, profiles!inner(*)')
-      .eq('circle_id', circleId);
-
-    if (!members) return;
-
-    const friendMarkers: FriendMarker[] = [];
-
-    for (const member of members) {
-      if (member.user_id === user.id) continue;
-
-      const { data: locations } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('user_id', member.user_id)
-        .order('recorded_at', { ascending: false })
-        .limit(1);
-
-      const memberProfile = member.profiles;
-      const latestLocation = locations?.[0];
-
-      if (latestLocation && memberProfile) {
-        friendMarkers.push({
-          id: member.user_id,
-          name: getDisplayName(memberProfile),
-          latitude: Number(latestLocation.latitude),
-          longitude: Number(latestLocation.longitude),
-          battery: latestLocation.battery_level,
-          isCharging: latestLocation.is_charging,
-          lastSeen: latestLocation.recorded_at,
-          avatar: memberProfile.avatar_url,
-        });
-      }
-    }
-
-    setFriends(friendMarkers);
+    const markers = await fetchCircleMemberMarkers(circleId, user.id);
+    setFriends(markers);
   }
 
   async function loadPlaces(circleId: string) {

@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as ExpoLocation from 'expo-location';
-import { supabase } from '@/lib/supabase';
+import { BACKGROUND_LOCATION_TASK } from '@/lib/background-location-constants';
+import {
+  setActiveLocationUserId,
+  uploadLocationToSupabase,
+} from '@/lib/location-upload';
 import type { LocationObject } from '@/lib/location';
 
-const UPLOAD_INTERVAL_MS = 30_000;
+const UPLOAD_INTERVAL_MS = 10_000;
 
 const WATCH_OPTIONS: ExpoLocation.LocationOptions = {
   accuracy: ExpoLocation.Accuracy.Balanced,
   timeInterval: 10_000,
-  distanceInterval: 50,
+  distanceInterval: 25,
 };
 
 function webPositionToLocation(position: GeolocationPosition): LocationObject {
@@ -25,6 +30,52 @@ function webPositionToLocation(position: GeolocationPosition): LocationObject {
     },
     timestamp: position.timestamp,
   };
+}
+
+async function syncBackgroundLocationUpdates(enabled: boolean) {
+  if (Platform.OS === 'web' || Constants.appOwnership === 'expo') {
+    return;
+  }
+
+  const hasStarted = await ExpoLocation.hasStartedLocationUpdatesAsync(
+    BACKGROUND_LOCATION_TASK
+  );
+
+  if (!enabled) {
+    if (hasStarted) {
+      await ExpoLocation.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    }
+    return;
+  }
+
+  const { status: foregroundStatus } =
+    await ExpoLocation.requestForegroundPermissionsAsync();
+  if (foregroundStatus !== 'granted') {
+    return;
+  }
+
+  const { status: backgroundStatus } =
+    await ExpoLocation.requestBackgroundPermissionsAsync();
+
+  if (backgroundStatus !== 'granted') {
+    return;
+  }
+
+  if (hasStarted) {
+    return;
+  }
+
+  await ExpoLocation.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+    accuracy: ExpoLocation.Accuracy.Balanced,
+    timeInterval: 15_000,
+    distanceInterval: 25,
+    showsBackgroundLocationIndicator: true,
+    foregroundService: {
+      notificationTitle: 'LocateMate',
+      notificationBody: 'Sharing your location with your circle',
+      notificationColor: '#3B82F6',
+    },
+  });
 }
 
 export function useLocationTracking(
@@ -43,28 +94,29 @@ export function useLocationTracking(
       if (now - lastUploadRef.current < UPLOAD_INTERVAL_MS) return;
       lastUploadRef.current = now;
 
-      const { error: locationError } = await supabase.from('locations').insert({
-        user_id: userId,
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        accuracy: loc.coords.accuracy,
-        speed: loc.coords.speed,
-        heading: loc.coords.heading,
-        altitude: loc.coords.altitude,
-      });
-
-      if (locationError) {
-        console.warn('Failed to upload location:', locationError.message);
-        return;
-      }
-
-      await supabase
-        .from('profiles')
-        .update({ last_seen: new Date().toISOString() })
-        .eq('id', userId);
+      await uploadLocationToSupabase(loc, userId);
     },
     [userId, locationSharingEnabled]
   );
+
+  useEffect(() => {
+    setActiveLocationUserId(locationSharingEnabled ? userId ?? null : null);
+  }, [userId, locationSharingEnabled]);
+
+  useEffect(() => {
+    if (!userId || !locationSharingEnabled) {
+      syncBackgroundLocationUpdates(false);
+      return;
+    }
+
+    syncBackgroundLocationUpdates(true).catch((error) => {
+      console.warn('Background location setup failed:', error);
+    });
+
+    return () => {
+      syncBackgroundLocationUpdates(false).catch(() => undefined);
+    };
+  }, [userId, locationSharingEnabled]);
 
   useEffect(() => {
     let watchSubscription: ExpoLocation.LocationSubscription | null = null;
@@ -117,6 +169,10 @@ export function useLocationTracking(
       );
     }
 
+    if (!locationSharingEnabled) {
+      return;
+    }
+
     if (Platform.OS === 'web') {
       startWebTracking();
     } else {
@@ -129,7 +185,7 @@ export function useLocationTracking(
         navigator.geolocation.clearWatch(webWatchId);
       }
     };
-  }, [uploadLocation]);
+  }, [uploadLocation, locationSharingEnabled]);
 
   return { location, permissionGranted };
 }

@@ -20,6 +20,7 @@ export interface Database {
           battery_level: number | null;
           is_charging: boolean;
           last_seen: string | null;
+          expo_push_token: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -33,6 +34,7 @@ export interface Database {
           battery_level?: number | null;
           is_charging?: boolean;
           last_seen?: string | null;
+          expo_push_token?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -46,6 +48,7 @@ export interface Database {
           battery_level?: number | null;
           is_charging?: boolean;
           last_seen?: string | null;
+          expo_push_token?: string | null;
           created_at?: string;
           updated_at?: string;
         };

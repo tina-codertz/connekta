@@ -22,6 +22,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
       NSContactsUsageDescription:
         'LocateMate uses your contacts to help you find friends who already use the app.',
       LSApplicationQueriesSchemes: ['whatsapp'],
+      UIBackgroundModes: ['location', 'remote-notification'],
     },
   },
   android: {
@@ -33,7 +34,11 @@ export default (_context: ConfigContext): ExpoConfig => ({
     permissions: [
       'ACCESS_COARSE_LOCATION',
       'ACCESS_FINE_LOCATION',
+      'ACCESS_BACKGROUND_LOCATION',
       'READ_CONTACTS',
+      'POST_NOTIFICATIONS',
+      'FOREGROUND_SERVICE',
+      'FOREGROUND_SERVICE_LOCATION',
     ],
   },
   web: {
@@ -54,7 +59,17 @@ export default (_context: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationAlwaysAndWhenInUsePermission: 'Allow LocateMate to use your location.',
+        locationAlwaysAndWhenInUsePermission:
+          'Allow LocateMate to share your location with your circle in the background.',
+        isAndroidBackgroundLocationEnabled: true,
+        isAndroidForegroundServiceEnabled: true,
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/images/icon.png',
+        color: '#3B82F6',
       },
     ],
     [
