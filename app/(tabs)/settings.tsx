@@ -10,6 +10,7 @@ import {
 } from 'lucide-react-native';
 import { Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
+import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
@@ -21,6 +22,7 @@ import { SignOutButton } from '@/components/settings/SignOutButton';
 
 export default function SettingsScreen() {
   const { user, profile, signOut, updateProfile } = useAuth();
+  const { contentPaddingBottom } = useTabBarInsets();
   const [locationEnabled, setLocationEnabled] = useState(profile?.is_location_enabled ?? true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -73,7 +75,7 @@ export default function SettingsScreen() {
     <SafeAreaScreen edges={['top']} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: contentPaddingBottom }]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title="Settings" compactTop />
@@ -180,7 +182,6 @@ const styles = StyleSheet.create({
   },
   scrollView: { flex: 1 },
   scrollContent: {
-    paddingBottom: 100,
     paddingHorizontal: 24,
   },
   profileSection: {

@@ -6,6 +6,7 @@ import { Row } from '@/components/ExpoUI';
 import { ActionButtonGroup } from '@/components/ui/ActionButtonGroup';
 import { SecondaryButton } from '@/components/ui/SecondaryButton';
 import { useAuth } from '@/hooks/useAuth';
+import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { supabase } from '@/lib/supabase';
 import { joinCircleByCode, mapCircleMembers } from '@/lib/circles';
 import { Colors } from '@/lib/theme';
@@ -23,6 +24,7 @@ import { CircleWithDetails } from '@/components/circles/types';
 export default function CirclesScreen() {
   const { action } = useLocalSearchParams<{ action?: string | string[] }>();
   const { user } = useAuth();
+  const { contentPaddingBottom } = useTabBarInsets();
   const [circles, setCircles] = useState<CircleWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -250,7 +252,7 @@ export default function CirclesScreen() {
             }}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -334,6 +336,5 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
   },
 });

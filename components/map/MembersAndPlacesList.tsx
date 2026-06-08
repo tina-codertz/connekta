@@ -4,6 +4,7 @@ import { MapPin, Plus } from 'lucide-react-native';
 import { Row, Text } from '@/components/ExpoUI';
 import { FriendLocationCard } from './FriendLocationCard';
 import { PlaceCard } from './PlaceCard';
+import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { FriendMarker } from './types';
 import { Place } from '@/types/database';
 import { Colors } from '@/lib/theme';
@@ -33,10 +34,12 @@ export function MembersAndPlacesList({
   onTogglePlaceNotify,
   onDeletePlace,
 }: MembersAndPlacesListProps) {
+  const { contentPaddingBottom } = useTabBarInsets();
+
   return (
     <ScrollView
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -101,7 +104,6 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   content: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
   },
   header: {
     justifyContent: 'space-between',

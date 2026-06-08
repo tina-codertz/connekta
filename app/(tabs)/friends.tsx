@@ -3,6 +3,7 @@ import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native'
 import { Users, Mail, UserPlus } from 'lucide-react-native';
 import { Column, Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
+import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { supabase } from '@/lib/supabase';
 import {
   loadFriendProfiles,
@@ -30,6 +31,7 @@ import { FriendRequestWithProfile } from '@/components/friends/types';
 type RequestListItem = FriendRequestWithProfile & { type: 'received' | 'sent' };
 
 export default function FriendsScreen() {
+  const { contentPaddingBottom } = useTabBarInsets();
   const { user, profile } = useAuth();
   const inviterName = getDisplayName(profile, user);
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,7 +243,7 @@ export default function FriendsScreen() {
               onAdd={handleSendFriendRequest}
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             !searching ? (
@@ -269,7 +271,7 @@ export default function FriendsScreen() {
               renderItem={({ item }) => (
                 <FriendCard profile={item} onRemove={removeFriend} />
               )}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -310,7 +312,7 @@ export default function FriendsScreen() {
                   onCancel={cancelRequest}
                 />
               )}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -351,7 +353,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
   },
   searchEmpty: {
     paddingTop: 40,
