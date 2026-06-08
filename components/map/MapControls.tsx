@@ -4,16 +4,22 @@ import { ZoomIn, ZoomOut, Locate } from 'lucide-react-native';
 import { Column } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
-export function MapControls() {
+interface MapControlsProps {
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onRecenter?: () => void;
+}
+
+export function MapControls({ onZoomIn, onZoomOut, onRecenter }: MapControlsProps) {
   return (
     <Column spacing={8} style={styles.container}>
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={onZoomIn}>
         <ZoomIn size={20} color={Colors.neutral[300]} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={onZoomOut}>
         <ZoomOut size={20} color={Colors.neutral[300]} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={onRecenter}>
         <Locate size={20} color={Colors.primary[400]} />
       </TouchableOpacity>
     </Column>

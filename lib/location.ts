@@ -71,10 +71,13 @@ export const Location = {
     return DEFAULT_LOCATION;
   },
 
-  watchPositionAsync: async (options?: any): Promise<{ remove: () => void }> => {
+  watchPositionAsync: async (
+    options?: unknown,
+    callback?: (location: LocationObject) => void
+  ): Promise<{ remove: () => void }> => {
     if (NativeLocation?.watchPositionAsync) {
       try {
-        return await NativeLocation.watchPositionAsync(options, () => {});
+        return await NativeLocation.watchPositionAsync(options, callback ?? (() => {}));
       } catch (e) {
         console.warn('Error watching position:', e);
         return { remove: () => {} };

@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/react": "~19.1.10",
     "baseline-browser-mapping": "^2.10.34",
     "typescript": "~5.9.2"

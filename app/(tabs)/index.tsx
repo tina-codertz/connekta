@@ -1,99 +1,61 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { Colors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
-import { Location, type LocationObject } from '@/lib/location';
 import { Circle, Place } from '@/types/database';
 import { MapHeader } from '@/components/map/MapHeader';
 import { CircleSelector } from '@/components/map/CircleSelector';
-import { MapPlaceholder } from '@/components/map/MapPlaceholder';
+import { MapPanel } from '@/components/map/MapPanel';
 import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
 import { FriendMarker } from '@/components/map/types';
 
 export default function MapScreen() {
   const { user, profile } = useAuth();
-  const [location, setLocation] = useState<LocationObject | null>(null);
+  const locationSharingEnabled = profile?.is_location_enabled ?? true;
+  const { location } = useLocationTracking(user?.id, locationSharingEnabled);
+
   const [friends, setFriends] = useState<FriendMarker[]>([]);
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInitialData();
-    requestLocationPermission();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedCircle) {
       loadPlaces(selectedCircle.id);
+      loadFriendsLocations(selectedCircle.id);
     }
-  }, [selectedCircle]);
-
-  async function requestLocationPermission() {
-    if (Platform.OS === 'web') {
-      if (navigator?.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setLocation({
-              coords: {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                altitude: position.coords.altitude,
-                speed: position.coords.speed,
-                heading: position.coords.heading,
-                altitudeAccuracy: null,
-              },
-              timestamp: position.timestamp,
-            } as LocationObject);
-          },
-          (error) => {
-            console.log('Web geolocation error:', error);
-          }
-        );
-      }
-      return;
-    }
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-
-      const currentLocation = await Location.getCurrentPositionAsync();
-      setLocation(currentLocation);
-
-      Location.watchPositionAsync({
-        timeInterval: 10000,
-        distanceInterval: 50,
-      }).catch((error) => {
-        console.warn('Error watching position:', error);
-      });
-    } catch (error) {
-      console.log('Location permission error:', error);
-    }
-  }
+  }, [selectedCircle?.id, user?.id]);
 
   async function loadInitialData() {
-    setLoading(true);
+    if (!user?.id) return;
+
     const { data: circlesData } = await supabase
       .from('circles')
       .select('*, circle_members!inner(user_id)')
-      .eq('circle_members.user_id', user?.id);
+      .eq('circle_members.user_id', user.id);
 
     if (circlesData && circlesData.length > 0) {
       setCircles(circlesData);
       setSelectedCircle(circlesData[0]);
-      await loadFriendsLocations(circlesData[0].id);
-      await loadPlaces(circlesData[0].id);
+    } else {
+      setCircles([]);
+      setSelectedCircle(null);
+      setFriends([]);
+      setPlaces([]);
     }
-    setLoading(false);
   }
 
   async function loadFriendsLocations(circleId: string) {
+    if (!user?.id) return;
+
     const { data: members } = await supabase
       .from('circle_members')
       .select('*, profiles!inner(*)')
@@ -104,7 +66,7 @@ export default function MapScreen() {
     const friendMarkers: FriendMarker[] = [];
 
     for (const member of members) {
-      if (member.user_id === user?.id) continue;
+      if (member.user_id === user.id) continue;
 
       const { data: locations } = await supabase
         .from('locations')
@@ -144,10 +106,11 @@ export default function MapScreen() {
       await loadFriendsLocations(selectedCircle.id);
     }
     setRefreshing(false);
-  }, [selectedCircle]);
+  }, [selectedCircle, user?.id]);
 
   const handleSelectCircle = (circle: Circle) => {
     setSelectedCircle(circle);
+    setSelectedFriendId(null);
   };
 
   const handleSelectFriend = (friend: FriendMarker) => {
@@ -164,7 +127,12 @@ export default function MapScreen() {
         onSelect={handleSelectCircle}
       />
 
-      <MapPlaceholder location={location} />
+      <MapPanel
+        location={location}
+        friends={friends}
+        places={places}
+        selectedFriendId={selectedFriendId}
+      />
 
       <MembersAndPlacesList
         friends={friends}
