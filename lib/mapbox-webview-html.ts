@@ -167,6 +167,12 @@ export function buildMapboxWebViewHtml(
       });
 
       function bootMap(attempts) {
+        if (!accessToken) {
+          setStatus('Missing Mapbox access token.');
+          postHostMessage({ type: 'error', message: 'Missing Mapbox access token. Add EXPO_PUBLIC_MAPBOX_TOKEN to .env and restart Expo.' });
+          return;
+        }
+
         if (!window.mapboxgl) {
           if (attempts > 100) {
             setStatus('Could not load Mapbox. Check your internet connection.');

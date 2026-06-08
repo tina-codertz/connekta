@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Text } from '@/components/ExpoUI';
-import { isMapboxConfigured, mapConfig } from '@/lib/map-config';
+import { isMapboxConfigured, mapConfig, MAPBOX_WEBVIEW_BASE_URL } from '@/lib/map-config';
 import { buildPlacePickerHtml } from '@/lib/place-picker-html';
 import { formatCoordinates } from '@/lib/places';
 import { Colors } from '@/lib/theme';
@@ -98,7 +98,7 @@ export function PlacePickerMap({
         key={mapKey}
         ref={webViewRef}
         originWhitelist={['*']}
-        source={{ html }}
+        source={{ html, baseUrl: MAPBOX_WEBVIEW_BASE_URL }}
         style={styles.webview}
         onMessage={handleMessage}
         javaScriptEnabled

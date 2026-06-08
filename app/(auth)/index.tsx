@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { Mail, Lock, MapPin } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, Spacing, BorderRadius } from '@/lib/theme';
-import { Host, Column, Row, Text, Button } from '@/components/ExpoUI';
+import { Column, Text } from '@/components/ExpoUI';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 
 export default function SignInScreen() {
@@ -108,7 +108,7 @@ export default function SignInScreen() {
                 colors={['#3B82F6', '#2563EB']}
                 style={styles.signInGradient}
               >
-                <Text style={styles.signInText}>
+                <Text textStyle={styles.signInText}>
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Text>
               </LinearGradient>
@@ -116,22 +116,22 @@ export default function SignInScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text textStyle={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity onPress={() => router.push('/sign-up')}>
-              <Text style={styles.signUpText}>
-                Don't have an account?{' '}
-                <Text style={styles.signUpLink}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.signUpRow}>
+              <Text textStyle={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/sign-up')}>
+                <Text textStyle={styles.signUpLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.features}>
             <View style={styles.featureItem}>
               <MapPin size={16} color={Colors.primary[400]} />
-              <Text style={styles.featureText}>Real-time location sharing</Text>
+              <Text textStyle={styles.featureText}>Real-time location sharing</Text>
             </View>
           </View>
         </ScrollView>
@@ -171,8 +171,9 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 24 },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.neutral[700] },
   dividerText: { color: Colors.neutral[500], fontSize: 14, marginHorizontal: 16 },
-  signUpText: { color: Colors.neutral[400], fontSize: 16, textAlign: 'center', fontFamily: 'Inter-Regular' },
-  signUpLink: { color: Colors.primary[400], fontWeight: '600' },
+  signUpRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  signUpText: { color: Colors.neutral[400], fontSize: 16, fontFamily: 'Inter-Regular' },
+  signUpLink: { color: Colors.primary[400], fontWeight: '600', fontSize: 16 },
   features: { marginTop: 32, alignItems: 'center' },
   featureItem: { flexDirection: 'row', alignItems: 'center' },
   featureText: { color: Colors.neutral[400], fontSize: 14, marginLeft: 8, fontFamily: 'Inter-Regular' },

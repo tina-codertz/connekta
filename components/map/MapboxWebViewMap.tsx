@@ -1,7 +1,7 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { mapConfig, isMapboxConfigured } from '@/lib/map-config';
+import { mapConfig, isMapboxConfigured, MAPBOX_WEBVIEW_BASE_URL } from '@/lib/map-config';
 import { buildMapboxWebViewHtml, toMapWebViewPayload } from '@/lib/mapbox-webview-html';
 import type { LocationObject } from '@/lib/location';
 import { FriendMarker } from './types';
@@ -130,7 +130,7 @@ export const MapboxWebViewMap = forwardRef<LocateMapHandle, MapboxWebViewMapProp
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html }}
+          source={{ html, baseUrl: MAPBOX_WEBVIEW_BASE_URL }}
           style={styles.webview}
           onMessage={handleMessage}
           onLoadEnd={() => {

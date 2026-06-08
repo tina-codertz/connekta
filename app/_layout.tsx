@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { Host } from '@/components/ExpoUI';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initNativeMapbox } from '@/lib/mapbox-native';
@@ -28,29 +29,34 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
+      <Host style={{ flex: 1 }}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      </Host>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="invite" />
-      <Stack.Protected guard={!!user}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="sos"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
-      </Stack.Protected>
-      <Stack.Protected guard={!user}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <Host style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Protected guard={!!user}>
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="invite" />
+          <Stack.Screen
+            name="sos"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </Stack.Protected>
+        <Stack.Protected guard={!user}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </Host>
   );
 }
 

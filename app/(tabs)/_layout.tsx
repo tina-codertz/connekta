@@ -13,6 +13,10 @@ import {
   TAB_BAR_BACKGROUND,
 } from '@/components/ui/TabBarBackground';
 
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function TabLayout() {
   const { user, loading } = useAuth();
   const insets = useSafeAreaInsets();
@@ -34,6 +38,7 @@ export default function TabLayout() {
   return (
     <View style={styles.root}>
       <Tabs
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
           sceneContainerStyle: styles.scene,
