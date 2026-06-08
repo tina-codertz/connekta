@@ -1,11 +1,14 @@
 import { Redirect, Tabs } from 'expo-router';
 import { MapPin, Users, User, Settings } from 'lucide-react-native';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/lib/theme';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
 
   if (loading) {
     return null;
@@ -19,7 +22,13 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: tabBarHeight,
+            paddingBottom: Math.max(insets.bottom, 8),
+          },
+        ],
         tabBarActiveTintColor: Colors.primary[500],
         tabBarInactiveTintColor: Colors.neutral[500],
         tabBarShowLabel: true,
@@ -82,9 +91,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: Colors.neutral[900],
     borderTopWidth: 0,
-    height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
   },
   tabBarLabel: {
     fontFamily: 'Inter-Medium',

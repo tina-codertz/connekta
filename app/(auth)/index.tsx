@@ -15,6 +15,7 @@ import { Mail, Lock, MapPin } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, Spacing, BorderRadius } from '@/lib/theme';
 import { Host, Column, Row, Text, Button } from '@/components/ExpoUI';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -47,6 +48,7 @@ export default function SignInScreen() {
   };
 
   return (
+    <SafeAreaScreen edges={['top', 'bottom']} style={styles.safeArea}>
     <LinearGradient colors={[Colors.neutral[900] as string, Colors.neutral[950] as string]} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -56,7 +58,7 @@ export default function SignInScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Column spacing={16} alignment="center" style={{ marginTop: 80 }}>
+          <Column spacing={16} alignment="center" style={{ marginTop: 24 }}>
             <View style={styles.logoContainer}>
               <LinearGradient
                 colors={['#3B82F6', '#2563EB']}
@@ -135,10 +137,12 @@ export default function SignInScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },

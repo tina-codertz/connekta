@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Text } from '@/components/ExpoUI';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { Colors } from '@/lib/theme';
 
 interface ModalSheetProps {
@@ -12,6 +13,8 @@ interface ModalSheetProps {
 }
 
 export function ModalSheet({ visible, title, onClose, children }: ModalSheetProps) {
+  const { headerPaddingTop } = useScreenInsets();
+
   return (
     <Modal
       visible={visible}
@@ -20,7 +23,7 @@ export function ModalSheet({ visible, title, onClose, children }: ModalSheetProp
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
           <Text textStyle={styles.title}>{title}</Text>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <X size={24} color={Colors.neutral[400]} />
@@ -42,7 +45,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[800],

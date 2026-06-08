@@ -12,6 +12,7 @@ import { Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 import { ProfileCard } from '@/components/settings/ProfileCard';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { SettingRow } from '@/components/settings/SettingRow';
@@ -69,13 +70,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top']} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="Settings" />
+        <ScreenHeader title="Settings" compactTop />
 
         <View style={styles.profileSection}>
           <ProfileCard profile={profile} user={user} onPress={openEditProfile} />
@@ -169,14 +170,13 @@ export default function SettingsScreen() {
         onClose={() => setShowEditProfile(false)}
         onSave={handleSaveProfile}
       />
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[950],
   },
   scrollView: { flex: 1 },
   scrollContent: {

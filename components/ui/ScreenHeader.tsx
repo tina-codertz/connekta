@@ -1,16 +1,22 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '@/components/ExpoUI';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { Colors } from '@/lib/theme';
 
 interface ScreenHeaderProps {
   title: string;
   action?: ReactNode;
+  compactTop?: boolean;
 }
 
-export function ScreenHeader({ title, action }: ScreenHeaderProps) {
+export function ScreenHeader({ title, action, compactTop }: ScreenHeaderProps) {
+  const { headerPaddingTop } = useScreenInsets();
+
   return (
-    <View style={styles.header}>
+    <View
+      style={[styles.header, { paddingTop: compactTop ? 16 : headerPaddingTop }]}
+    >
       <Text textStyle={styles.title}>{title}</Text>
       {action}
     </View>
@@ -45,7 +51,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   title: {

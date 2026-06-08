@@ -14,11 +14,13 @@ export function usePlaceGeofencing(
   userId: string | undefined,
   profile: Profile | null | undefined,
   location: LocationObject | null,
-  locationSharingEnabled: boolean
+  locationSharingEnabled: boolean,
+  placesVersion = 0
 ) {
   const placesRef = useRef<Place[]>([]);
   const presenceRef = useRef<Record<string, boolean>>({});
   const lastAlertRef = useRef<Record<string, number>>({});
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!userId) {
@@ -29,13 +31,14 @@ export function usePlaceGeofencing(
 
     loadUserPlaces(userId).then((places) => {
       placesRef.current = places;
+      initializedRef.current = false;
       const nextPresence: Record<string, boolean> = {};
       places.forEach((place) => {
         nextPresence[place.id] = presenceRef.current[place.id] ?? false;
       });
       presenceRef.current = nextPresence;
     });
-  }, [userId]);
+  }, [userId, placesVersion]);
 
   useEffect(() => {
     if (!userId || !location || !locationSharingEnabled) {
@@ -45,6 +48,14 @@ export function usePlaceGeofencing(
     const { latitude, longitude } = location.coords;
     const userName = getDisplayNameForGeofence(profile);
     const now = Date.now();
+
+    if (!initializedRef.current) {
+      placesRef.current.forEach((place) => {
+        presenceRef.current[place.id] = isInsidePlace(latitude, longitude, place);
+      });
+      initializedRef.current = true;
+      return;
+    }
 
     placesRef.current.forEach((place) => {
       const inside = isInsidePlace(latitude, longitude, place);

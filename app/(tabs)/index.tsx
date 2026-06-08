@@ -4,6 +4,9 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { usePlaceGeofencing } from '@/hooks/usePlaceGeofencing';
+import { AddPlaceModal } from '@/components/places/AddPlaceModal';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 import { Colors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { Alert as SosAlert, Circle, Place } from '@/types/database';
@@ -23,6 +26,13 @@ export default function MapScreen() {
   const { user, profile } = useAuth();
   const locationSharingEnabled = profile?.is_location_enabled ?? true;
   const { location } = useLocationTracking(user?.id, locationSharingEnabled);
+  usePlaceGeofencing(
+    user?.id,
+    profile,
+    location,
+    locationSharingEnabled,
+    places.length
+  );
 
   const [friends, setFriends] = useState<FriendMarker[]>([]);
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
@@ -36,6 +46,7 @@ export default function MapScreen() {
   } | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showAddPlaceModal, setShowAddPlaceModal] = useState(false);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
 
   const refreshUnreadCount = useCallback(async () => {
@@ -80,22 +91,25 @@ export default function MapScreen() {
         },
         async (payload) => {
           const alert = payload.new as SosAlert;
-          if (alert.type !== 'sos' || alert.user_id === user.id) return;
+          if (alert.user_id === user.id) return;
           if (!circleIds.includes(alert.circle_id)) return;
 
-          const { data: senderProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', alert.user_id)
-            .maybeSingle();
-
-          setActiveSosAlert({
-            senderName: getDisplayName(senderProfile),
-            message: alert.message || 'Sent an SOS alert',
-          });
-
           refreshUnreadCount();
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+          if (alert.type === 'sos') {
+            const { data: senderProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', alert.user_id)
+              .maybeSingle();
+
+            setActiveSosAlert({
+              senderName: getDisplayName(senderProfile),
+              message: alert.message || 'Sent an SOS alert',
+            });
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }
         }
       )
       .subscribe();
@@ -188,6 +202,15 @@ export default function MapScreen() {
     setSelectedFriendId((prev) => (prev === friend.id ? null : friend.id));
   };
 
+  const handleAddPlace = () => {
+    if (!selectedCircle) {
+      Alert.alert('No circle', 'Create or join a circle before adding a place.');
+      return;
+    }
+
+    setShowAddPlaceModal(true);
+  };
+
   const handleAddCircle = () => {
     Alert.alert('Circles', 'Create a new circle or join one with an invite code.', [
       { text: 'Cancel', style: 'cancel' },
@@ -203,10 +226,11 @@ export default function MapScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top']} style={styles.container}>
       <MapHeader
         profile={profile}
         user={user}
+        compactTop
         unreadCount={unreadAlertCount}
         onSearchPress={() => setShowSearchModal(true)}
         onNotificationsPress={() => setShowNotificationsModal(true)}
@@ -247,6 +271,7 @@ export default function MapScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         onSelectFriend={handleSelectFriend}
+        onAddPlace={handleAddPlace}
       />
 
       <MapSearchModal
@@ -265,14 +290,28 @@ export default function MapScreen() {
         onClose={() => setShowNotificationsModal(false)}
         onAlertsChanged={refreshUnreadCount}
       />
-    </View>
+
+      <AddPlaceModal
+        visible={showAddPlaceModal}
+        circleId={selectedCircle?.id ?? null}
+        circleName={selectedCircle?.name}
+        userId={user?.id || ''}
+        initialLatitude={location?.coords.latitude ?? null}
+        initialLongitude={location?.coords.longitude ?? null}
+        onClose={() => setShowAddPlaceModal(false)}
+        onPlaceCreated={() => {
+          if (selectedCircle) {
+            loadPlaces(selectedCircle.id);
+          }
+        }}
+      />
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[950],
   },
   noCirclesHint: {
     marginHorizontal: 24,

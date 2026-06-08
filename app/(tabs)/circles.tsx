@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { joinCircleByCode, mapCircleMembers } from '@/lib/circles';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader, HeaderActionButton } from '@/components/ui/ScreenHeader';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GradientSubmitButton } from '@/components/ui/GradientSubmitButton';
 import { CircleCard } from '@/components/circles/CircleCard';
@@ -215,9 +216,10 @@ export default function CirclesScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top']} style={styles.container}>
       <ScreenHeader
         title="Circles"
+        compactTop
         action={
           <Row spacing={8}>
             <HeaderActionButton
@@ -322,14 +324,13 @@ export default function CirclesScreen() {
         onClose={() => setShowInviteModal(false)}
         onMemberAdded={handleMemberAdded}
       />
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[950],
   },
   listContent: {
     paddingHorizontal: 24,

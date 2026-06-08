@@ -6,6 +6,7 @@ import { initNativeMapbox } from '@/lib/mapbox-native';
 import { setupAuthSessionRefresh } from '@/lib/supabase';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -74,10 +75,12 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-      <StatusBar style="auto" />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootLayoutNav />
+        <StatusBar style="auto" />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

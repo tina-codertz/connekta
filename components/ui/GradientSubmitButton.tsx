@@ -10,6 +10,7 @@ interface GradientSubmitButtonProps {
   icon?: ReactNode;
   style?: ViewStyle;
   fullWidth?: boolean;
+  disabled?: boolean;
 }
 
 export function GradientSubmitButton({
@@ -18,11 +19,13 @@ export function GradientSubmitButton({
   icon,
   style,
   fullWidth = true,
+  disabled,
 }: GradientSubmitButtonProps) {
   return (
     <TouchableOpacity
-      style={[styles.button, fullWidth && styles.fullWidth, style]}
+      style={[styles.button, fullWidth && styles.fullWidth, disabled && styles.disabled, style]}
       onPress={onPress}
+      disabled={disabled}
     >
       <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.gradient}>
         {icon}
@@ -41,6 +44,9 @@ const styles = StyleSheet.create({
   },
   fullWidth: {
     width: '100%',
+  },
+  disabled: {
+    opacity: 0.5,
   },
   gradient: {
     flexDirection: 'row',

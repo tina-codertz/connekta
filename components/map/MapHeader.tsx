@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell, Search } from 'lucide-react-native';
 import { Column, Row, Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { getGreeting } from './utils';
 import { getDisplayName } from '@/lib/profile';
 import type { Profile } from '@/types/database';
@@ -14,6 +15,7 @@ interface MapHeaderProps {
   unreadCount?: number;
   onNotificationsPress?: () => void;
   onSearchPress?: () => void;
+  compactTop?: boolean;
 }
 
 export function MapHeader({
@@ -22,9 +24,14 @@ export function MapHeader({
   unreadCount = 0,
   onNotificationsPress,
   onSearchPress,
+  compactTop,
 }: MapHeaderProps) {
+  const { headerPaddingTop } = useScreenInsets();
+
   return (
-    <View style={styles.header}>
+    <View
+      style={[styles.header, { paddingTop: compactTop ? 16 : headerPaddingTop }]}
+    >
       <Column spacing={2}>
         <Text textStyle={styles.greeting}>Good {getGreeting()}</Text>
         <Text textStyle={styles.name}>{getDisplayName(profile, user)}</Text>
@@ -56,7 +63,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   greeting: {

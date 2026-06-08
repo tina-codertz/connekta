@@ -15,6 +15,7 @@ import { getDisplayName } from '@/lib/profile';
 import { Colors } from '@/lib/theme';
 import { Profile } from '@/types/database';
 import { ScreenHeader, HeaderActionButton } from '@/components/ui/ScreenHeader';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 import { AddFriendModal } from '@/components/friends/AddFriendModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ActionButtonGroup } from '@/components/ui/ActionButtonGroup';
@@ -205,9 +206,10 @@ export default function FriendsScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top']} style={styles.container}>
       <ScreenHeader
         title="Friends"
+        compactTop
         action={
           <HeaderActionButton
             onPress={() => setShowAddFriendModal(true)}
@@ -339,14 +341,13 @@ export default function FriendsScreen() {
         onClose={() => setShowAddFriendModal(false)}
         onFriendRequestSent={loadFriendRequests}
       />
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[950],
   },
   listContent: {
     paddingHorizontal: 24,

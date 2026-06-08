@@ -16,6 +16,7 @@ import { LinearGradient } from '@/components/LinearGradient';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { loadSosCircleSummaries, sendSosAlert, SosCircleSummary } from '@/lib/sos';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 import { Colors } from '@/lib/theme';
 
 const HOLD_DURATION_MS = 2000;
@@ -140,8 +141,8 @@ export default function SosScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaScreen edges={['top', 'bottom']} style={styles.container}>
+      <View style={[styles.header, { paddingTop: 16 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={22} color={Colors.neutral[0]} />
         </TouchableOpacity>
@@ -244,21 +245,19 @@ export default function SosScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[950],
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[800],

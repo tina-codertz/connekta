@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, Gradients, Typography, Spacing, BorderRadius } from '@/lib/theme';
+import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
 
 export default function SignUpScreen() {
   const [fullName, setFullName] = useState('');
@@ -61,6 +62,7 @@ export default function SignUpScreen() {
   };
 
   return (
+    <SafeAreaScreen edges={['top', 'bottom']} style={styles.safeArea}>
     <LinearGradient colors={[...Gradients.dark]} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -180,10 +182,14 @@ export default function SignUpScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: 16,
     paddingBottom: Spacing.xl,
   },
   backButton: {
