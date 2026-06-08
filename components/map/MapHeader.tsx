@@ -4,17 +4,21 @@ import { Bell, Search } from 'lucide-react-native';
 import { Column, Row, Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 import { getGreeting } from './utils';
+import { getDisplayName } from '@/lib/profile';
+import type { Profile } from '@/types/database';
+import type { User } from '@supabase/supabase-js';
 
 interface MapHeaderProps {
-  userName?: string | null;
+  profile?: Profile | null;
+  user?: User | null;
 }
 
-export function MapHeader({ userName }: MapHeaderProps) {
+export function MapHeader({ profile, user }: MapHeaderProps) {
   return (
     <View style={styles.header}>
       <Column spacing={2}>
         <Text textStyle={styles.greeting}>Good {getGreeting()}</Text>
-        <Text textStyle={styles.name}>{userName || 'User'}</Text>
+        <Text textStyle={styles.name}>{getDisplayName(profile, user)}</Text>
       </Column>
       <Row spacing={8}>
         <TouchableOpacity style={styles.iconButton}>

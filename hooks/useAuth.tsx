@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types/database';
+import { getNameFromUserMetadata, toFirstName } from '@/lib/profile';
 
 interface AuthContextType {
   session: Session | null;
@@ -28,124 +29,218 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    let active = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (!active) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          await fetchProfile(nextSession.user);
+        } else if (event === 'TOKEN_REFRESHED') {
+          setLoading(false);
+        }
       } else {
         setProfile(null);
-        setLoading(false);
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  async function fetchProfile(userId: string) {
-    const { data, error } = await supabase
+  async function syncAuthMetadata(updates: {
+    full_name?: string;
+    first_name?: string;
+    phone?: string | null;
+  }) {
+    const payload: Record<string, string> = {};
+    if (updates.full_name !== undefined) payload.full_name = updates.full_name;
+    if (updates.first_name !== undefined) payload.first_name = updates.first_name;
+    if (updates.phone !== undefined) payload.phone = updates.phone ?? '';
+    if (Object.keys(payload).length === 0) return null;
+
+    const { data, error } = await supabase.auth.updateUser({ data: payload });
+    if (error) {
+      console.warn('Failed to sync auth metadata:', error.message);
+      return null;
+    }
+
+    if (data.user) {
+      setUser(data.user);
+    }
+
+    return data.user ?? null;
+  }
+
+  async function ensureProfile(authUser: User): Promise<Profile | null> {
+    const { data: existing, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.warn('Failed to fetch profile:', fetchError.message);
+    }
+
+    const metadataName = getNameFromUserMetadata(authUser);
+
+    if (existing) {
+      if (!existing.full_name?.trim() && metadataName) {
+        const { data: updated, error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: metadataName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', authUser.id)
+          .select('*')
+          .single();
+
+        if (!updateError && updated) {
+          return updated;
+        }
+      }
+
+      return existing;
+    }
+
+    if (!authUser.email) return null;
+
+    const { data: created, error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        email: authUser.email,
+        full_name: metadataName,
+      })
+      .select('*')
       .single();
 
-    if (!error && data) {
-      setProfile(data);
-      setLoading(false);
-      return;
+    if (createError) {
+      console.warn('Failed to create profile:', createError.message);
+      return null;
     }
 
-    // Fallback for accounts created before the profile trigger existed
-    const { data: authData } = await supabase.auth.getUser();
-    const authUser = authData.user;
+    return created;
+  }
 
-    if (authUser?.id === userId && authUser.email) {
-      const { data: createdProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: authUser.email,
-          full_name: (authUser.user_metadata?.full_name as string) || null,
-        })
-        .select('*')
-        .single();
-
-      if (!createError && createdProfile) {
-        setProfile(createdProfile);
-      }
-    }
-
+  async function fetchProfile(authUser: User) {
+    const resolved = await ensureProfile(authUser);
+    setProfile(resolved);
     setLoading(false);
   }
 
   async function signUp(email: string, password: string, fullName: string) {
+    const firstName = toFirstName(fullName);
+    const trimmedFullName = fullName.trim();
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: trimmedFullName,
+          first_name: firstName,
         },
       },
     });
 
     if (error) return { error };
 
+    if (data.session?.user) {
+      await supabase.from('profiles').upsert(
+        {
+          id: data.session.user.id,
+          email: data.session.user.email ?? email,
+          full_name: firstName || trimmedFullName,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+    }
+
     return { error: null, needsEmailConfirmation: !data.session };
   }
 
   async function signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) return { error };
-
-    if (data.session?.user) {
-      setSession(data.session);
-      setUser(data.session.user);
-      await fetchProfile(data.session.user.id);
-    }
-
-    return { error: null };
+    return { error };
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+    setSession(null);
+    setUser(null);
     setProfile(null);
   }
 
   async function updateProfile(updates: Partial<Profile>) {
     if (!user) return { error: new Error('No user') };
 
-    const payload = { ...(updates as Partial<Profile>), updated_at: new Date().toISOString() };
-    // supabase client typings can be strict depending on generated Table types; cast to any to satisfy overloads
-    const { error } = await supabase
-      .from('profiles')
-      .update(payload as any)
-      .eq('id', user.id);
-
-    if (!error) {
-      setProfile({ ...profile!, ...updates });
+    const normalized: Partial<Profile> = { ...updates };
+    if (typeof normalized.full_name === 'string') {
+      normalized.full_name = normalized.full_name.trim();
+    }
+    if (typeof normalized.phone === 'string') {
+      normalized.phone = normalized.phone.trim() || null;
     }
 
-    return { error };
+    const payload = { ...normalized, updated_at: new Date().toISOString() };
+    const { data: updatedProfile, error } = await supabase
+      .from('profiles')
+      .update(payload as Partial<Profile>)
+      .eq('id', user.id)
+      .select('*')
+      .single();
+
+    if (error) return { error };
+
+    const metadataUpdates: {
+      full_name?: string;
+      first_name?: string;
+      phone?: string | null;
+    } = {};
+
+    if (normalized.full_name !== undefined) {
+      metadataUpdates.full_name = normalized.full_name ?? '';
+      metadataUpdates.first_name =
+        toFirstName(normalized.full_name ?? '') || normalized.full_name || '';
+    }
+
+    if (normalized.phone !== undefined) {
+      metadataUpdates.phone = normalized.phone;
+    }
+
+    await syncAuthMetadata(metadataUpdates);
+
+    if (updatedProfile) {
+      setProfile(updatedProfile);
+    } else {
+      setProfile((current) => (current ? { ...current, ...normalized } : current));
+    }
+
+    return { error: null };
   }
 
   async function refreshProfile() {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfile(user);
     }
   }
 

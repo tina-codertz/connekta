@@ -89,7 +89,7 @@ export default function SignUpScreen() {
               <User size={20} color={Colors.neutral[400]} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Full name"
+                placeholder="First name"
                 placeholderTextColor={Colors.neutral[500]}
                 value={fullName}
                 onChangeText={setFullName}

@@ -1,59 +1,39 @@
 import 'react-native-url-polyfill/auto';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
+import { authStorage, AUTH_STORAGE_KEY } from './auth-storage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Determine storage based on platform
-let storage: any = null;
-
-// For web environment, use localStorage
-if (Platform.OS === 'web' || typeof window !== 'undefined') {
-  storage = {
-    getItem: async (key: string) => {
-      try {
-        return window.localStorage?.getItem(key) ?? null;
-      } catch {
-        return null;
-      }
-    },
-    setItem: async (key: string, value: string) => {
-      try {
-        window.localStorage?.setItem(key, value);
-      } catch {
-        // Storage might be unavailable, silently fail
-      }
-    },
-    removeItem: async (key: string) => {
-      try {
-        window.localStorage?.removeItem(key);
-      } catch {
-        // Storage might be unavailable, silently fail
-      }
-    },
-  };
-} else {
-  // For native platforms, try to use AsyncStorage
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    storage = AsyncStorage;
-  } catch {
-    // Fallback if AsyncStorage is not available
-    storage = {
-      getItem: async () => null,
-      setItem: async () => {},
-      removeItem: async () => {},
-    };
-  }
-}
-
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: storage,
+    storage: authStorage,
+    storageKey: AUTH_STORAGE_KEY,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
 });
+
+let authRefreshRegistered = false;
+
+/**
+ * Keeps the session alive while the app is open and refreshes tokens when returning
+ * from background (same pattern as Instagram / most mobile apps).
+ */
+export function setupAuthSessionRefresh() {
+  if (authRefreshRegistered || Platform.OS === 'web') return;
+  authRefreshRegistered = true;
+
+  supabase.auth.startAutoRefresh();
+
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}

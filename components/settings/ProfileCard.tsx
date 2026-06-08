@@ -3,20 +3,24 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Edit3, Camera } from 'lucide-react-native';
 import { Column, Text } from '@/components/ExpoUI';
 import { Avatar } from '@/components/ui/Avatar';
+import type { User } from '@supabase/supabase-js';
 import { Profile } from '@/types/database';
+import { getDisplayName } from '@/lib/profile';
 import { Colors } from '@/lib/theme';
 
 interface ProfileCardProps {
   profile: Profile | null;
+  user?: User | null;
   onPress: () => void;
 }
 
-export function ProfileCard({ profile, onPress }: ProfileCardProps) {
+export function ProfileCard({ profile, user, onPress }: ProfileCardProps) {
+  const displayName = getDisplayName(profile, user);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.avatarWrapper}>
         <Avatar
-          name={profile?.full_name}
+          name={displayName}
           imageUrl={profile?.avatar_url}
           size={64}
         />
@@ -25,7 +29,7 @@ export function ProfileCard({ profile, onPress }: ProfileCardProps) {
         </TouchableOpacity>
       </View>
       <Column spacing={4} style={styles.info}>
-        <Text textStyle={styles.name}>{profile?.full_name || 'User'}</Text>
+        <Text textStyle={styles.name}>{displayName}</Text>
         <Text textStyle={styles.email}>{profile?.email}</Text>
       </Column>
       <Edit3 size={20} color={Colors.neutral[500]} />

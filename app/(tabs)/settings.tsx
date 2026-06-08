@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
 import {
   User,
@@ -19,12 +19,20 @@ import { EditProfileForm } from '@/components/settings/EditProfileForm';
 import { SignOutButton } from '@/components/settings/SignOutButton';
 
 export default function SettingsScreen() {
-  const { profile, signOut, updateProfile } = useAuth();
+  const { user, profile, signOut, updateProfile } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(profile?.is_location_enabled ?? true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editingName, setEditingName] = useState(profile?.full_name || '');
   const [editingPhone, setEditingPhone] = useState(profile?.phone || '');
+
+  useEffect(() => {
+    if (profile) {
+      setEditingName(profile.full_name || '');
+      setEditingPhone(profile.phone || '');
+      setLocationEnabled(profile.is_location_enabled ?? true);
+    }
+  }, [profile?.full_name, profile?.phone, profile?.is_location_enabled]);
 
   const openEditProfile = () => {
     setEditingName(profile?.full_name || '');
@@ -43,8 +51,8 @@ export default function SettingsScreen() {
 
   const handleSaveProfile = async () => {
     const { error } = await updateProfile({
-      full_name: editingName,
-      phone: editingPhone,
+      full_name: editingName.trim(),
+      phone: editingPhone.trim() || null,
     });
     if (error) {
       Alert.alert('Error', 'Failed to update profile');
@@ -70,7 +78,7 @@ export default function SettingsScreen() {
         <ScreenHeader title="Settings" />
 
         <View style={styles.profileSection}>
-          <ProfileCard profile={profile} onPress={openEditProfile} />
+          <ProfileCard profile={profile} user={user} onPress={openEditProfile} />
         </View>
 
         <SettingsSection title="Account" noTopMargin>

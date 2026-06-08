@@ -119,7 +119,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapHeader userName={profile?.full_name} />
+      <MapHeader profile={profile} user={user} />
 
       <CircleSelector
         circles={circles}
