@@ -35,3 +35,6 @@ export function getMapboxGlStyleUrl(): string {
   const token = mapConfig.accessToken;
   return `https://api.mapbox.com/styles/v1/${mapConfig.style}?access_token=${encodeURIComponent(token)}`;
 }
+
+/** Base URL for WebView maps so mapbox-gl CDN assets load correctly */
+export const MAPBOX_WEBVIEW_BASE_URL = 'https://api.mapbox.com/';

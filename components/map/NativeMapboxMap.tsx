@@ -1,12 +1,13 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState, type ComponentRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   MapView,
   Camera,
   PointAnnotation,
   UserLocation,
-  type CameraRef,
 } from '@rnmapbox/maps';
+
+type CameraRef = ComponentRef<typeof Camera>;
 import { getMapboxStyleUrl, isMapboxConfigured } from '@/lib/map-config';
 import type { LocationObject } from '@/lib/location';
 import { FriendMarker } from './types';

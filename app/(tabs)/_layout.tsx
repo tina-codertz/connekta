@@ -39,9 +39,7 @@ export default function TabLayout() {
           headerShown: false,
           lazy: true,
           freezeOnBlur: true,
-          detachInactiveScreens: true,
           animation: Platform.OS === 'android' ? 'none' : 'shift',
-          sceneContainerStyle: styles.scene,
           tabBarBackground: () => <TabBarBackground />,
           tabBarStyle: {
             height: tabBarHeight,
@@ -98,9 +96,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: TAB_BAR_BACKGROUND,
-  },
-  scene: {
-    backgroundColor: Colors.neutral[950],
   },
   tabBarItem: {
     paddingTop: 2,

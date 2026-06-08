@@ -6,24 +6,27 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type ProfileRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+  is_location_enabled: boolean;
+  battery_level: number | null;
+  is_charging: boolean;
+  last_seen: string | null;
+  expo_push_token: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string;
-          email: string;
-          full_name: string | null;
-          avatar_url: string | null;
-          phone: string | null;
-          is_location_enabled: boolean;
-          battery_level: number | null;
-          is_charging: boolean;
-          last_seen: string | null;
-          expo_push_token: string | null;
-          created_at: string;
-          updated_at: string;
-        };
+        Row: ProfileRow;
+        Relationships: [];
         Insert: {
           id: string;
           email: string;
@@ -65,6 +68,7 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Relationships: [];
         Insert: {
           id?: string;
           name: string;
@@ -96,6 +100,22 @@ export interface Database {
           role: 'owner' | 'admin' | 'member';
           joined_at: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'circle_members_circle_id_fkey';
+            columns: ['circle_id'];
+            isOneToOne: false;
+            referencedRelation: 'circles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'circle_members_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
         Insert: {
           id?: string;
           circle_id: string;
@@ -127,6 +147,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
         };
+        Relationships: [];
         Insert: {
           id?: string;
           circle_id: string;
@@ -172,6 +193,7 @@ export interface Database {
           is_charging: boolean;
           recorded_at: string;
         };
+        Relationships: [];
         Insert: {
           id?: string;
           user_id: string;
@@ -208,6 +230,22 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'friend_requests_receiver_id_fkey';
+            columns: ['receiver_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'friend_requests_sender_id_fkey';
+            columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
         Insert: {
           id?: string;
           sender_id: string;
@@ -235,6 +273,7 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
+        Relationships: [];
         Insert: {
           id?: string;
           circle_id: string;
@@ -265,6 +304,22 @@ export interface Database {
           is_read: boolean;
           created_at: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'alerts_circle_id_fkey';
+            columns: ['circle_id'];
+            isOneToOne: false;
+            referencedRelation: 'circles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'alerts_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
         Insert: {
           id?: string;
           circle_id: string;
@@ -311,11 +366,11 @@ export interface Database {
       };
       search_profiles_for_friends: {
         Args: { p_query: string };
-        Returns: Database['public']['Tables']['profiles']['Row'][];
+        Returns: ProfileRow[];
       };
       find_profiles_by_emails: {
         Args: { p_emails: string[] };
-        Returns: Database['public']['Tables']['profiles']['Row'][];
+        Returns: ProfileRow[];
       };
       users_are_friends: {
         Args: { p_user_id: string };
@@ -340,6 +395,24 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      get_circle_member_locations: {
+        Args: { p_circle_id: string };
+        Returns: {
+          user_id: string;
+          full_name: string | null;
+          email: string;
+          avatar_url: string | null;
+          is_location_enabled: boolean;
+          battery_level: number | null;
+          is_charging: boolean;
+          last_seen: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          accuracy: number | null;
+          recorded_at: string | null;
+          location_id: string | null;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -347,7 +420,7 @@ export interface Database {
   };
 }
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Profile = ProfileRow;
 export type Circle = Database['public']['Tables']['circles']['Row'];
 export type CircleMember = Database['public']['Tables']['circle_members']['Row'];
 export type Place = Database['public']['Tables']['places']['Row'];

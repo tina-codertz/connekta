@@ -1,7 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { AppState, Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
 import { authStorage, AUTH_STORAGE_KEY } from './auth-storage';
 
@@ -19,9 +19,9 @@ function getSupabaseConfig() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
-let supabaseClient: ReturnType<typeof createClient<Database>> | null = null;
+let supabaseClient: SupabaseClient<Database> | null = null;
 
-function getSupabaseClient() {
+function getSupabaseClient(): SupabaseClient<Database> {
   if (supabaseClient) {
     return supabaseClient;
   }
@@ -46,13 +46,16 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
-export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
-  get(_target, prop, receiver) {
-    const client = getSupabaseClient();
-    const value = Reflect.get(client, prop, receiver);
-    return typeof value === 'function' ? value.bind(client) : value;
-  },
-});
+export const supabase: SupabaseClient<Database> = new Proxy(
+  {} as SupabaseClient<Database>,
+  {
+    get(_target, prop, receiver) {
+      const client = getSupabaseClient();
+      const value = Reflect.get(client, prop, receiver);
+      return typeof value === 'function' ? value.bind(client) : value;
+    },
+  }
+);
 
 let authRefreshRegistered = false;
 

@@ -22,8 +22,10 @@ export function getNameFromUserMetadata(user: User | null | undefined): string |
   return null;
 }
 
+export type DisplayNameProfile = Pick<Profile, 'full_name' | 'email'>;
+
 export function getDisplayName(
-  profile: Profile | null | undefined,
+  profile: DisplayNameProfile | null | undefined,
   user?: User | null
 ): string {
   if (profile?.full_name?.trim()) {

@@ -12,7 +12,7 @@ interface SettingsSectionProps {
 export function SettingsSection({ title, children, noTopMargin }: SettingsSectionProps) {
   return (
     <>
-      <Text textStyle={[styles.title, noTopMargin && styles.titleFirst]}>{title}</Text>
+      <Text style={[styles.title, noTopMargin ? styles.titleFirst : undefined]}>{title}</Text>
       <View style={styles.content}>{children}</View>
     </>
   );

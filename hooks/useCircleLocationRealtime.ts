@@ -36,13 +36,15 @@ export function useCircleLocationRealtime({
       return;
     }
 
+    const activeCircleId = circleId;
+    const activeUserId = currentUserId;
     let cancelled = false;
 
     async function loadMembers() {
       const { data: members } = await supabase
         .from('circle_members')
         .select('user_id')
-        .eq('circle_id', circleId);
+        .eq('circle_id', activeCircleId);
 
       if (cancelled) {
         return;
@@ -51,12 +53,12 @@ export function useCircleLocationRealtime({
       const ids = new Set(
         (members ?? [])
           .map((member) => member.user_id)
-          .filter((userId) => userId !== currentUserId)
+          .filter((userId) => userId !== activeUserId)
       );
       memberIdsRef.current = ids;
 
       const circleMembers = await fetchCircleMembers(
-        circleId,
+        activeCircleId,
         viewerSharingRef.current
       );
 
@@ -68,7 +70,7 @@ export function useCircleLocationRealtime({
     loadMembers();
 
     const channel = supabase
-      .channel(`circle-locations-${circleId}-${currentUserId}`)
+      .channel(`circle-locations-${activeCircleId}-${activeUserId}`)
       .on(
         'postgres_changes',
         {

@@ -30,18 +30,13 @@ export const LinearGradient: React.FC<LinearGradientProps> = ({
 
   const backgroundImage = `linear-gradient(${gradientDirection}, ${gradientString})`;
 
-  return (
-    <View
-      {...props}
-      style={[
-        style,
-        {
-          backgroundImage,
-        },
-      ]}
-    >
-      {children}
-    </View>
+  return React.createElement(
+    View,
+    {
+      ...props,
+      style: [style, { backgroundImage } as ViewProps['style']],
+    },
+    children
   );
 };
 

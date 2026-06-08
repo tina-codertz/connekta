@@ -5,6 +5,10 @@ const useNativeMapbox =
   process.env.EAS_BUILD_PLATFORM !== 'android' &&
   process.env.EXPO_ANDROID_NO_NATIVE_MAPBOX !== '1';
 
+const mapboxPlugin: [string, { RNMapboxMapsVersion: string }] | null = useNativeMapbox
+  ? ['@rnmapbox/maps', { RNMapboxMapsVersion: '11.20.1' }]
+  : null;
+
 export default (_context: ConfigContext): ExpoConfig => ({
   name: 'LocateMate',
   slug: 'locatemate',
@@ -56,16 +60,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-web-browser',
-    ...(useNativeMapbox
-      ? [
-          [
-            '@rnmapbox/maps',
-            {
-              RNMapboxMapsVersion: '11.20.1',
-            },
-          ],
-        ]
-      : []),
+    ...(mapboxPlugin ? [mapboxPlugin] : []),
     [
       'expo-location',
       {

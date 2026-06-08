@@ -52,8 +52,29 @@ export async function getCurrentPositionAsync() {
   };
 }
 
-export async function watchPositionAsync(options, callback) {
-  // Return a subscription object that does nothing
+type WebLocationCoords = {
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  accuracy: number;
+  altitudeAccuracy: number;
+  heading: number;
+  speed: number;
+};
+
+type WebLocationObject = {
+  coords: WebLocationCoords;
+  timestamp: number;
+};
+
+type WebLocationSubscription = {
+  remove: () => void;
+};
+
+export async function watchPositionAsync(
+  _options: Record<string, unknown>,
+  _callback: (location: WebLocationObject) => void
+): Promise<WebLocationSubscription> {
   return {
     remove: () => {},
   };
