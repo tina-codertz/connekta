@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { Check, X, Clock } from 'lucide-react-native';
 import { Column, Row, Text } from '@/components/ExpoUI';
 import { Avatar } from '@/components/ui/Avatar';
+import { IconActionButton } from '@/components/ui/IconActionButton';
+import { listCardStyles } from '@/components/ui/listCardStyles';
+import { getDisplayName } from '@/lib/profile';
 import { FriendRequestWithProfile } from './types';
 import { Colors } from '@/lib/theme';
 
@@ -23,88 +26,45 @@ export function FriendRequestCard({
 }: FriendRequestCardProps) {
   const profile =
     variant === 'sent' ? (request.receiver ?? request.sender) : request.sender;
+  const displayName = getDisplayName(profile);
 
   return (
-    <View style={styles.card}>
-      <Avatar name={profile.full_name} imageUrl={profile.avatar_url} style={styles.avatar} />
-      <Column spacing={variant === 'sent' ? 4 : 2} style={styles.info}>
-        <Text textStyle={styles.name}>{profile.full_name || 'Unknown'}</Text>
+    <View style={listCardStyles.card}>
+      <Avatar
+        name={displayName}
+        imageUrl={profile?.avatar_url}
+        size={44}
+        style={listCardStyles.avatar}
+      />
+      <Column spacing={variant === 'sent' ? 4 : 2} style={listCardStyles.info}>
+        <Text textStyle={listCardStyles.name} numberOfLines={1}>
+          {displayName}
+        </Text>
         {variant === 'received' ? (
-          <Text textStyle={styles.email}>{profile.email}</Text>
+          <Text textStyle={listCardStyles.subtitle} numberOfLines={1}>
+            {profile?.email}
+          </Text>
         ) : (
           <Row spacing={4} alignment="center">
             <Clock size={12} color={Colors.warning} />
-            <Text textStyle={styles.pending}>Pending</Text>
+            <Text textStyle={[listCardStyles.badgeText, { color: Colors.warning }]}>Pending</Text>
           </Row>
         )}
       </Column>
       {variant === 'received' ? (
         <Row spacing={8}>
-          <TouchableOpacity style={styles.acceptButton} onPress={() => onAccept?.(request.id)}>
+          <IconActionButton variant="success" onPress={() => onAccept?.(request.id)}>
             <Check size={18} color={Colors.neutral[0]} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.rejectButton} onPress={() => onReject?.(request.id)}>
+          </IconActionButton>
+          <IconActionButton variant="muted" onPress={() => onReject?.(request.id)}>
             <X size={18} color={Colors.neutral[0]} />
-          </TouchableOpacity>
+          </IconActionButton>
         </Row>
       ) : (
-        <TouchableOpacity style={styles.cancelButton} onPress={() => onCancel?.(request.id)}>
+        <IconActionButton onPress={() => onCancel?.(request.id)}>
           <X size={18} color={Colors.neutral[500]} />
-        </TouchableOpacity>
+        </IconActionButton>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral[900],
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.neutral[800],
-  },
-  avatar: { marginRight: 16 },
-  info: { flex: 1 },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.neutral[0],
-  },
-  email: {
-    fontSize: 12,
-    color: Colors.neutral[500],
-  },
-  pending: {
-    fontSize: 12,
-    color: Colors.warning,
-    fontWeight: '600',
-  },
-  acceptButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.secondary[600],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rejectButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.neutral[700],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.neutral[800],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

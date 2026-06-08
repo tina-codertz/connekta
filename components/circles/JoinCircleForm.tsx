@@ -28,7 +28,7 @@ export function JoinCircleForm({
     <ModalSheet visible={visible} title="Join Circle" onClose={onClose}>
       <Column spacing={16} style={styles.content}>
         <Text textStyle={styles.hint}>
-          Enter the 6-character invite code shared by a circle member.
+          Enter the 6-character code from a circle member. Friends can be added without a code.
         </Text>
         <FormField
           label="Invite Code"

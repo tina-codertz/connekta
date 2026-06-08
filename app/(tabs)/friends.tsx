@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
-import { Users, Mail } from 'lucide-react-native';
+import { Users, Mail, UserPlus } from 'lucide-react-native';
 import { Column, Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import {
+  loadFriendProfiles,
+  loadPendingFriendRequests,
+  searchProfilesForFriends,
+  sendFriendRequest,
+} from '@/lib/friends';
 import { Colors } from '@/lib/theme';
 import { Profile } from '@/types/database';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ScreenHeader, HeaderActionButton } from '@/components/ui/ScreenHeader';
+import { AddFriendModal } from '@/components/friends/AddFriendModal';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ActionButtonGroup } from '@/components/ui/ActionButtonGroup';
+import { GradientSubmitButton } from '@/components/ui/GradientSubmitButton';
 import { FriendsSearchBar } from '@/components/friends/FriendsSearchBar';
 import { FriendsTabBar } from '@/components/friends/FriendsTabBar';
 import { FriendCard } from '@/components/friends/FriendCard';
@@ -28,6 +37,7 @@ export default function FriendsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
   const [searching, setSearching] = useState(false);
+  const [showAddFriendModal, setShowAddFriendModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -40,41 +50,25 @@ export default function FriendsScreen() {
   }
 
   async function loadFriends() {
-    const { data: acceptedRequests } = await supabase
-      .from('friend_requests')
-      .select('sender_id, receiver_id')
-      .eq('status', 'accepted')
-      .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`);
-
-    if (!acceptedRequests || acceptedRequests.length === 0) {
+    if (!user?.id) {
       setFriends([]);
       return;
     }
 
-    const friendIds = acceptedRequests.map((req) =>
-      req.sender_id === user?.id ? req.receiver_id : req.sender_id
-    );
-
-    const { data: profiles } = await supabase.from('profiles').select('*').in('id', friendIds);
-
-    setFriends(profiles || []);
+    const profiles = await loadFriendProfiles(user.id);
+    setFriends(profiles);
   }
 
   async function loadFriendRequests() {
-    const { data: received } = await supabase
-      .from('friend_requests')
-      .select('*, sender:profiles!friend_requests_sender_id_fkey(*)')
-      .eq('receiver_id', user?.id)
-      .eq('status', 'pending');
+    if (!user?.id) {
+      setPendingRequests([]);
+      setSentRequests([]);
+      return;
+    }
 
-    const { data: sent } = await supabase
-      .from('friend_requests')
-      .select('*, receiver:profiles!friend_requests_receiver_id_fkey(*)')
-      .eq('sender_id', user?.id)
-      .eq('status', 'pending');
-
-    setPendingRequests((received as FriendRequestWithProfile[]) || []);
-    setSentRequests((sent as FriendRequestWithProfile[]) || []);
+    const { received, sent } = await loadPendingFriendRequests(user.id);
+    setPendingRequests(received as FriendRequestWithProfile[]);
+    setSentRequests(sent as FriendRequestWithProfile[]);
   }
 
   const onRefresh = useCallback(async () => {
@@ -91,29 +85,25 @@ export default function FriendsScreen() {
     }
 
     setSearching(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .or(`email.ilike.%${query}%,full_name.ilike.%${query}%`)
-      .neq('id', user?.id)
-      .limit(10);
-
-    setSearchResults(data || []);
-    setSearching(false);
+    try {
+      const results = await searchProfilesForFriends(query);
+      setSearchResults(results);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Search failed');
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
   }
 
-  async function sendFriendRequest(receiverId: string) {
-    const { error } = await supabase.from('friend_requests').insert({
-      sender_id: user!.id,
-      receiver_id: receiverId,
-    });
+  async function handleSendFriendRequest(receiverId: string) {
+    if (!user?.id) {
+      return;
+    }
 
+    const { error } = await sendFriendRequest(user.id, receiverId);
     if (error) {
-      if (error.code === '23505') {
-        Alert.alert('Already Sent', 'You have already sent a request to this user');
-      } else {
-        Alert.alert('Error', 'Failed to send friend request');
-      }
+      Alert.alert('Error', error.message);
       return;
     }
 
@@ -197,7 +187,17 @@ export default function FriendsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Friends" />
+      <ScreenHeader
+        title="Friends"
+        action={
+          <HeaderActionButton
+            onPress={() => setShowAddFriendModal(true)}
+            accessibilityLabel="Add friend"
+          >
+            <UserPlus size={22} color={Colors.neutral[0]} />
+          </HeaderActionButton>
+        }
+      />
 
       <FriendsSearchBar
         value={searchQuery}
@@ -217,7 +217,7 @@ export default function FriendsScreen() {
               profile={item}
               isFriend={isAlreadyFriend(item.id)}
               isPending={isAlreadyRequested(item.id)}
-              onAdd={sendFriendRequest}
+              onAdd={handleSendFriendRequest}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -262,7 +262,16 @@ export default function FriendsScreen() {
                   <EmptyState
                     icon={<Users size={48} color={Colors.neutral[600]} />}
                     title="No Friends Yet"
-                    description="Search for users by email or name to add them as friends"
+                    description="Search by name or email, or find people from your contacts."
+                    action={
+                      <ActionButtonGroup>
+                        <GradientSubmitButton
+                          label="Add Friend"
+                          onPress={() => setShowAddFriendModal(true)}
+                          icon={<UserPlus size={20} color={Colors.neutral[0]} />}
+                        />
+                      </ActionButtonGroup>
+                    }
                   />
                 ) : null
               }
@@ -293,8 +302,8 @@ export default function FriendsScreen() {
                 !loading ? (
                   <EmptyState
                     icon={<Mail size={48} color={Colors.neutral[600]} />}
-                    title="No Pending Requests"
-                    description="Friend requests will appear here"
+                    title="No Requests"
+                    description="Incoming and outgoing friend requests will show up here."
                   />
                 ) : null
               }
@@ -302,6 +311,14 @@ export default function FriendsScreen() {
           )}
         </>
       )}
+      <AddFriendModal
+        visible={showAddFriendModal}
+        userId={user?.id || ''}
+        friends={friends}
+        sentRequestReceiverIds={sentRequests.map((request) => request.receiver_id)}
+        onClose={() => setShowAddFriendModal(false)}
+        onFriendRequestSent={loadFriendRequests}
+      />
     </View>
   );
 }

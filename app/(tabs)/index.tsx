@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert, Text as RNText } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { Colors } from '@/lib/theme';
@@ -10,8 +11,10 @@ import { CircleSelector } from '@/components/map/CircleSelector';
 import { MapPanel } from '@/components/map/MapPanel';
 import { MembersAndPlacesList } from '@/components/map/MembersAndPlacesList';
 import { FriendMarker } from '@/components/map/types';
+import { getDisplayName } from '@/lib/profile';
 
 export default function MapScreen() {
+  const router = useRouter();
   const { user, profile } = useAuth();
   const locationSharingEnabled = profile?.is_location_enabled ?? true;
   const { location } = useLocationTracking(user?.id, locationSharingEnabled);
@@ -78,10 +81,10 @@ export default function MapScreen() {
       const memberProfile = member.profiles;
       const latestLocation = locations?.[0];
 
-      if (latestLocation) {
+      if (latestLocation && memberProfile) {
         friendMarkers.push({
           id: member.user_id,
-          name: memberProfile.full_name || 'Unknown',
+          name: getDisplayName(memberProfile),
           latitude: Number(latestLocation.latitude),
           longitude: Number(latestLocation.longitude),
           battery: latestLocation.battery_level,
@@ -117,6 +120,20 @@ export default function MapScreen() {
     setSelectedFriendId((prev) => (prev === friend.id ? null : friend.id));
   };
 
+  const handleAddCircle = () => {
+    Alert.alert('Circles', 'Create a new circle or join one with an invite code.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Join Circle',
+        onPress: () => router.push('/circles?action=join'),
+      },
+      {
+        text: 'Create Circle',
+        onPress: () => router.push('/circles?action=create'),
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       <MapHeader profile={profile} user={user} />
@@ -125,7 +142,14 @@ export default function MapScreen() {
         circles={circles}
         selectedCircleId={selectedCircle?.id}
         onSelect={handleSelectCircle}
+        onAddPress={handleAddCircle}
       />
+
+      {circles.length === 0 ? (
+        <RNText style={styles.noCirclesHint}>
+          No circles yet. Tap + to create or join one.
+        </RNText>
+      ) : null}
 
       <MapPanel
         location={location}
@@ -150,5 +174,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.neutral[950],
+  },
+  noCirclesHint: {
+    marginHorizontal: 24,
+    marginBottom: 12,
+    fontSize: 14,
+    color: Colors.neutral[500],
+    textAlign: 'center',
   },
 });

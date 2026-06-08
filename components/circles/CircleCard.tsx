@@ -17,8 +17,10 @@ export function CircleCard({ circle, onPress }: CircleCardProps) {
         <Users size={24} color={Colors.neutral[0]} />
       </View>
       <View style={styles.info}>
-        <Text textStyle={styles.name}>{circle.name}</Text>
-        <Text textStyle={styles.meta}>
+        <Text textStyle={styles.name} numberOfLines={1}>
+          {circle.name}
+        </Text>
+        <Text textStyle={styles.meta} numberOfLines={1}>
           {circle.members.length} member{circle.members.length !== 1 ? 's' : ''} ·{' '}
           {circle.places_count} place{circle.places_count !== 1 ? 's' : ''}
         </Text>
@@ -47,7 +49,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  info: { flex: 1 },
+  info: { flex: 1, minWidth: 0 },
   name: {
     fontSize: 18,
     fontWeight: '600',

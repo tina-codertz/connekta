@@ -4,7 +4,6 @@ import { UserPlus, Trash2 } from 'lucide-react-native';
 import { Column, Row, Text } from '@/components/ExpoUI';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { CircleMemberRow } from './CircleMemberRow';
-import { CircleInviteCodeCard } from './CircleInviteCodeCard';
 import { CircleWithDetails } from './types';
 import { Colors } from '@/lib/theme';
 
@@ -28,13 +27,11 @@ export function CircleDetailModal({
   return (
     <ModalSheet visible={visible} title={circle.name} onClose={onClose}>
       <Column spacing={24} style={styles.content}>
-        <CircleInviteCodeCard code={circle.invite_code} circleName={circle.name} />
-
         <Row spacing={8} alignment="center" style={styles.membersHeader}>
           <Text textStyle={styles.sectionTitle}>Members</Text>
           <TouchableOpacity style={styles.inviteButton} onPress={onInvite}>
             <UserPlus size={18} color={Colors.primary[400]} />
-            <Text textStyle={styles.inviteText}>Invite</Text>
+            <Text textStyle={styles.inviteText}>Add Members</Text>
           </TouchableOpacity>
         </Row>
 

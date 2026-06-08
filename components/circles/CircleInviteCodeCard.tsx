@@ -27,7 +27,9 @@ export function CircleInviteCodeCard({ code, circleName }: CircleInviteCodeCardP
   return (
     <Column spacing={8}>
       <Text textStyle={styles.label}>Invite code</Text>
-      <Text textStyle={styles.hint}>Share this code so anyone can join your circle</Text>
+      <Text textStyle={styles.hint}>
+        For people who are not your friends. Friends can be added directly.
+      </Text>
       <View style={styles.codeBox}>
         <Text textStyle={styles.code}>{code}</Text>
       </View>

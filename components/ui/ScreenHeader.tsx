@@ -20,11 +20,20 @@ export function ScreenHeader({ title, action }: ScreenHeaderProps) {
 interface HeaderActionButtonProps {
   onPress: () => void;
   children: ReactNode;
+  accessibilityLabel?: string;
 }
 
-export function HeaderActionButton({ onPress, children }: HeaderActionButtonProps) {
+export function HeaderActionButton({
+  onPress,
+  children,
+  accessibilityLabel,
+}: HeaderActionButtonProps) {
   return (
-    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.actionButton}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+    >
       {children}
     </TouchableOpacity>
   );

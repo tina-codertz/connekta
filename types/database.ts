@@ -294,6 +294,27 @@ export interface Database {
           already_member: boolean;
         };
       };
+      add_friend_to_circle: {
+        Args: { p_circle_id: string; p_friend_id: string };
+        Returns: {
+          circle_id: string;
+          circle_name: string;
+          friend_id: string;
+          already_member: boolean;
+        };
+      };
+      search_profiles_for_friends: {
+        Args: { p_query: string };
+        Returns: Database['public']['Tables']['profiles']['Row'][];
+      };
+      find_profiles_by_emails: {
+        Args: { p_emails: string[] };
+        Returns: Database['public']['Tables']['profiles']['Row'][];
+      };
+      users_are_friends: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

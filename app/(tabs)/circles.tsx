@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Plus, Users, LogIn } from 'lucide-react-native';
 import { Row } from '@/components/ExpoUI';
+import { ActionButtonGroup } from '@/components/ui/ActionButtonGroup';
+import { SecondaryButton } from '@/components/ui/SecondaryButton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { joinCircleByCode, mapCircleMembers } from '@/lib/circles';
@@ -12,11 +15,12 @@ import { GradientSubmitButton } from '@/components/ui/GradientSubmitButton';
 import { CircleCard } from '@/components/circles/CircleCard';
 import { CreateCircleForm } from '@/components/circles/CreateCircleForm';
 import { CircleDetailModal } from '@/components/circles/CircleDetailModal';
-import { ShareCircleCodeModal } from '@/components/circles/ShareCircleCodeModal';
+import { InviteToCircleModal } from '@/components/circles/InviteToCircleModal';
 import { JoinCircleForm } from '@/components/circles/JoinCircleForm';
 import { CircleWithDetails } from '@/components/circles/types';
 
 export default function CirclesScreen() {
+  const { action } = useLocalSearchParams<{ action?: string | string[] }>();
   const { user } = useAuth();
   const [circles, setCircles] = useState<CircleWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +39,18 @@ export default function CirclesScreen() {
     loadCircles();
   }, []);
 
-  async function loadCircles() {
-    if (!user) return;
+  useEffect(() => {
+    const nextAction = Array.isArray(action) ? action[0] : action;
+    if (nextAction === 'create') {
+      setShowCreateModal(true);
+    }
+    if (nextAction === 'join') {
+      setShowJoinModal(true);
+    }
+  }, [action]);
+
+  async function loadCircles(): Promise<CircleWithDetails[]> {
+    if (!user) return [];
 
     setLoading(true);
     const { data: memberData } = await supabase
@@ -47,7 +61,7 @@ export default function CirclesScreen() {
     if (!memberData || memberData.length === 0) {
       setCircles([]);
       setLoading(false);
-      return;
+      return [];
     }
 
     const circleIds = memberData.map((m) => m.circle_id);
@@ -59,7 +73,7 @@ export default function CirclesScreen() {
     if (!circlesData) {
       setCircles([]);
       setLoading(false);
-      return;
+      return [];
     }
 
     const circlesWithDetails: CircleWithDetails[] = await Promise.all(
@@ -84,6 +98,7 @@ export default function CirclesScreen() {
 
     setCircles(circlesWithDetails);
     setLoading(false);
+    return circlesWithDetails;
   }
 
   const onRefresh = useCallback(async () => {
@@ -135,6 +150,18 @@ export default function CirclesScreen() {
       places_count: 0,
     });
     setShowInviteModal(true);
+  }
+
+  async function handleMemberAdded() {
+    const updatedCircles = await loadCircles();
+    if (!selectedCircle) {
+      return;
+    }
+
+    const updated = updatedCircles.find((circle) => circle.id === selectedCircle.id);
+    if (updated) {
+      setSelectedCircle(updated);
+    }
   }
 
   async function handleJoinCircle() {
@@ -193,10 +220,16 @@ export default function CirclesScreen() {
         title="Circles"
         action={
           <Row spacing={8}>
-            <HeaderActionButton onPress={() => setShowJoinModal(true)}>
+            <HeaderActionButton
+              onPress={() => setShowJoinModal(true)}
+              accessibilityLabel="Join circle"
+            >
               <LogIn size={20} color={Colors.neutral[0]} />
             </HeaderActionButton>
-            <HeaderActionButton onPress={() => setShowCreateModal(true)}>
+            <HeaderActionButton
+              onPress={() => setShowCreateModal(true)}
+              accessibilityLabel="Create circle"
+            >
               <Plus size={24} color={Colors.neutral[0]} />
             </HeaderActionButton>
           </Row>
@@ -229,20 +262,20 @@ export default function CirclesScreen() {
             <EmptyState
               icon={<Users size={48} color={Colors.neutral[600]} />}
               title="No Circles Yet"
-              description="Create a circle or join one with an invite code to start sharing your location"
+              description="Create a circle to share your location, or join one with an invite code."
               action={
-                <Row spacing={12}>
-                  <GradientSubmitButton
-                    label="Join with Code"
-                    onPress={() => setShowJoinModal(true)}
-                    icon={<LogIn size={20} color={Colors.neutral[0]} />}
-                  />
+                <ActionButtonGroup>
                   <GradientSubmitButton
                     label="Create Circle"
                     onPress={() => setShowCreateModal(true)}
                     icon={<Plus size={20} color={Colors.neutral[0]} />}
                   />
-                </Row>
+                  <SecondaryButton
+                    label="Join Circle"
+                    onPress={() => setShowJoinModal(true)}
+                    icon={<LogIn size={20} color={Colors.neutral[0]} />}
+                  />
+                </ActionButtonGroup>
               }
             />
           ) : null
@@ -282,11 +315,12 @@ export default function CirclesScreen() {
         }}
       />
 
-      <ShareCircleCodeModal
+      <InviteToCircleModal
         visible={showInviteModal}
-        circleName={selectedCircle?.name || ''}
-        inviteCode={selectedCircle?.invite_code || ''}
+        circle={selectedCircle}
+        userId={user?.id || ''}
         onClose={() => setShowInviteModal(false)}
+        onMemberAdded={handleMemberAdded}
       />
     </View>
   );

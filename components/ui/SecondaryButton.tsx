@@ -1,10 +1,9 @@
 import React, { ReactNode } from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { LinearGradient } from '@/components/LinearGradient';
 import { Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
-interface GradientSubmitButtonProps {
+interface SecondaryButtonProps {
   label: string;
   onPress: () => void;
   icon?: ReactNode;
@@ -12,48 +11,42 @@ interface GradientSubmitButtonProps {
   fullWidth?: boolean;
 }
 
-export function GradientSubmitButton({
+export function SecondaryButton({
   label,
   onPress,
   icon,
   style,
   fullWidth = true,
-}: GradientSubmitButtonProps) {
+}: SecondaryButtonProps) {
   return (
     <TouchableOpacity
       style={[styles.button, fullWidth && styles.fullWidth, style]}
       onPress={onPress}
     >
-      <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.gradient}>
-        {icon}
-        <Text textStyle={styles.label} numberOfLines={1}>
-          {label}
-        </Text>
-      </LinearGradient>
+      {icon}
+      <Text textStyle={styles.label}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  gradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    borderRadius: 16,
     paddingVertical: 16,
-    paddingHorizontal: 16,
+    backgroundColor: Colors.neutral[900],
+    borderWidth: 1,
+    borderColor: Colors.neutral[700],
+  },
+  fullWidth: {
+    width: '100%',
   },
   label: {
     color: Colors.neutral[0],
     fontSize: 16,
     fontWeight: '600',
-    flexShrink: 1,
   },
 });

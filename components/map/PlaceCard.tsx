@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Column, Text } from '@/components/ExpoUI';
+import { listCardStyles } from '@/components/ui/listCardStyles';
 import { Place } from '@/types/database';
 import { Colors } from '@/lib/theme';
 
@@ -11,13 +12,17 @@ interface PlaceCardProps {
 
 export function PlaceCard({ place }: PlaceCardProps) {
   return (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity style={listCardStyles.card}>
       <View style={[styles.icon, { backgroundColor: place.color }]}>
         <MapPin size={16} color={Colors.neutral[0]} />
       </View>
-      <Column spacing={2} style={styles.info}>
-        <Text textStyle={styles.name}>{place.name}</Text>
-        <Text textStyle={styles.address}>{place.address}</Text>
+      <Column spacing={2} style={listCardStyles.info}>
+        <Text textStyle={listCardStyles.name} numberOfLines={1}>
+          {place.name}
+        </Text>
+        <Text textStyle={listCardStyles.subtitle} numberOfLines={1}>
+          {place.address || 'No address'}
+        </Text>
       </Column>
       <Text textStyle={styles.radius}>{place.radius}m</Text>
     </TouchableOpacity>
@@ -25,16 +30,6 @@ export function PlaceCard({ place }: PlaceCardProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral[900],
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.neutral[800],
-  },
   icon: {
     width: 36,
     height: 36,
@@ -42,19 +37,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  info: { flex: 1 },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.neutral[0],
-  },
-  address: {
-    fontSize: 12,
-    color: Colors.neutral[500],
+    flexShrink: 0,
   },
   radius: {
     fontSize: 14,
     color: Colors.neutral[400],
+    flexShrink: 0,
   },
 });

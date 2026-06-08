@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Crown, Shield } from 'lucide-react-native';
 import { Row, Text } from '@/components/ExpoUI';
 import { Avatar } from '@/components/ui/Avatar';
+import { listCardStyles } from '@/components/ui/listCardStyles';
 import { Colors } from '@/lib/theme';
 import { getDisplayName } from '@/lib/profile';
 import { Profile } from '@/types/database';
@@ -22,44 +23,26 @@ export function CircleMemberRow({ profile, role }: CircleMemberRowProps) {
   const displayName = getDisplayName(profile);
 
   return (
-    <View style={styles.row}>
+    <View style={listCardStyles.card}>
       <Avatar
         name={displayName}
         imageUrl={profile?.avatar_url}
         size={44}
-        style={styles.avatar}
+        style={listCardStyles.avatar}
       />
-      <View style={styles.info}>
+      <View style={listCardStyles.info}>
         <Row spacing={4} alignment="center">
-          <Text textStyle={styles.name}>{displayName}</Text>
+          <Text textStyle={listCardStyles.name} numberOfLines={1}>
+            {displayName}
+          </Text>
           <RoleIcon role={role} />
         </Row>
         {profile?.email ? (
-          <Text textStyle={styles.email}>{profile.email}</Text>
+          <Text textStyle={listCardStyles.subtitle} numberOfLines={1}>
+            {profile.email}
+          </Text>
         ) : null}
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral[900],
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  avatar: { marginRight: 16 },
-  info: { flex: 1 },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.neutral[0],
-  },
-  email: {
-    fontSize: 12,
-    color: Colors.neutral[500],
-  },
-});

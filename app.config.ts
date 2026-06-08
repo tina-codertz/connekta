@@ -19,6 +19,8 @@ export default (_context: ConfigContext): ExpoConfig => ({
         'LocateMate needs your location to share it with your circles and friends.',
       NSLocationAlwaysUsageDescription:
         'LocateMate needs your location to share it with your circles and friends.',
+      NSContactsUsageDescription:
+        'LocateMate uses your contacts to help you find friends who already use the app.',
     },
   },
   android: {
@@ -27,7 +29,11 @@ export default (_context: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/images/icon.png',
       backgroundColor: '#0F172A',
     },
-    permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
+    permissions: [
+      'ACCESS_COARSE_LOCATION',
+      'ACCESS_FINE_LOCATION',
+      'READ_CONTACTS',
+    ],
   },
   web: {
     bundler: 'metro',
@@ -48,6 +54,12 @@ export default (_context: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationAlwaysAndWhenInUsePermission: 'Allow LocateMate to use your location.',
+      },
+    ],
+    [
+      'expo-contacts',
+      {
+        contactsPermission: 'Allow LocateMate to access your contacts to find friends.',
       },
     ],
   ],

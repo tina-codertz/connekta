@@ -25,7 +25,7 @@ export function CreateCircleForm({
   onSubmit,
 }: CreateCircleFormProps) {
   return (
-    <ModalSheet visible={visible} title="Create New Circle" onClose={onClose}>
+    <ModalSheet visible={visible} title="Create Circle" onClose={onClose}>
       <Column spacing={16} style={styles.content}>
         <FormField
           label="Circle Name"

@@ -53,6 +53,8 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your camera</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Allow LocateMate to access your contacts to find friends.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Allow LocateMate to use your location.</string>
     <key>NSLocationAlwaysUsageDescription</key>
