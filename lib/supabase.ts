@@ -62,15 +62,20 @@ let authRefreshRegistered = false;
  */
 export function setupAuthSessionRefresh() {
   if (authRefreshRegistered || Platform.OS === 'web') return;
-  authRefreshRegistered = true;
 
-  supabase.auth.startAutoRefresh();
+  try {
+    authRefreshRegistered = true;
+    supabase.auth.startAutoRefresh();
 
-  AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-      supabase.auth.startAutoRefresh();
-    } else {
-      supabase.auth.stopAutoRefresh();
-    }
-  });
+    AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+  } catch (error) {
+    authRefreshRegistered = false;
+    console.warn('Auth session refresh setup failed:', error);
+  }
 }

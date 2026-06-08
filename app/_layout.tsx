@@ -8,6 +8,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initNativeMapbox } from '@/lib/mapbox-native';
 import { setupAuthSessionRefresh } from '@/lib/supabase';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -52,20 +53,16 @@ function RootLayoutNav() {
     <Host style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
-        <Stack.Protected guard={!!user}>
-          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-          <Stack.Screen name="invite" />
-          <Stack.Screen
-            name="sos"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-        </Stack.Protected>
-        <Stack.Protected guard={!user}>
-          <Stack.Screen name="(auth)" />
-        </Stack.Protected>
+        <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="invite" />
+        <Stack.Screen
+          name="sos"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
       </Stack>
     </Host>
   );
@@ -99,14 +96,16 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <RootLayoutNav />
-          <StatusBar style="light" />
-        </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <RootLayoutNav />
+            <StatusBar style="light" />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

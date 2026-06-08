@@ -1,5 +1,10 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+/** Native Mapbox SDK is iOS-only; Android uses WebView to avoid release APK launch crashes. */
+const useNativeMapbox =
+  process.env.EAS_BUILD_PLATFORM !== 'android' &&
+  process.env.EXPO_ANDROID_NO_NATIVE_MAPBOX !== '1';
+
 export default (_context: ConfigContext): ExpoConfig => ({
   name: 'LocateMate',
   slug: 'locatemate',
@@ -51,12 +56,16 @@ export default (_context: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-web-browser',
-    [
-      '@rnmapbox/maps',
-      {
-        RNMapboxMapsVersion: '11.20.1',
-      },
-    ],
+    ...(useNativeMapbox
+      ? [
+          [
+            '@rnmapbox/maps',
+            {
+              RNMapboxMapsVersion: '11.20.1',
+            },
+          ],
+        ]
+      : []),
     [
       'expo-location',
       {

@@ -10,7 +10,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "prebuildCommand": "npx expo prebuild --platform android --no-install",
+      "prebuildCommand": "EXPO_ANDROID_NO_NATIVE_MAPBOX=1 npx expo prebuild --platform android --clean --no-install",
       "android": {
         "buildType": "apk"
       }
