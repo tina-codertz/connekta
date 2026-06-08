@@ -57,6 +57,7 @@ export interface Database {
           description: string | null;
           icon: string;
           color: string;
+          invite_code: string;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -67,6 +68,7 @@ export interface Database {
           description?: string | null;
           icon?: string;
           color?: string;
+          invite_code?: string;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -77,6 +79,7 @@ export interface Database {
           description?: string | null;
           icon?: string;
           color?: string;
+          invite_code?: string;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -282,7 +285,15 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      join_circle_by_code: {
+        Args: { p_code: string };
+        Returns: {
+          circle_id: string;
+          circle_name: string;
+          invite_code: string;
+          already_member: boolean;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;

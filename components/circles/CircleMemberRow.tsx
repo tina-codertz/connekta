@@ -4,10 +4,11 @@ import { Crown, Shield } from 'lucide-react-native';
 import { Row, Text } from '@/components/ExpoUI';
 import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/lib/theme';
+import { getDisplayName } from '@/lib/profile';
 import { Profile } from '@/types/database';
 
 interface CircleMemberRowProps {
-  profile: Profile;
+  profile: Profile | null | undefined;
   role: string;
 }
 
@@ -18,20 +19,24 @@ function RoleIcon({ role }: { role: string }) {
 }
 
 export function CircleMemberRow({ profile, role }: CircleMemberRowProps) {
+  const displayName = getDisplayName(profile);
+
   return (
     <View style={styles.row}>
       <Avatar
-        name={profile.full_name}
-        imageUrl={profile.avatar_url}
+        name={displayName}
+        imageUrl={profile?.avatar_url}
         size={44}
         style={styles.avatar}
       />
       <View style={styles.info}>
         <Row spacing={4} alignment="center">
-          <Text textStyle={styles.name}>{profile.full_name || 'Unknown'}</Text>
+          <Text textStyle={styles.name}>{displayName}</Text>
           <RoleIcon role={role} />
         </Row>
-        <Text textStyle={styles.email}>{profile.email}</Text>
+        {profile?.email ? (
+          <Text textStyle={styles.email}>{profile.email}</Text>
+        ) : null}
       </View>
     </View>
   );

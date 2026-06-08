@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
-import { Plus, Users } from 'lucide-react-native';
+import { Plus, Users, LogIn } from 'lucide-react-native';
+import { Row } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { joinCircleByCode, mapCircleMembers } from '@/lib/circles';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader, HeaderActionButton } from '@/components/ui/ScreenHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -10,7 +12,8 @@ import { GradientSubmitButton } from '@/components/ui/GradientSubmitButton';
 import { CircleCard } from '@/components/circles/CircleCard';
 import { CreateCircleForm } from '@/components/circles/CreateCircleForm';
 import { CircleDetailModal } from '@/components/circles/CircleDetailModal';
-import { InviteMemberForm } from '@/components/circles/InviteMemberForm';
+import { ShareCircleCodeModal } from '@/components/circles/ShareCircleCodeModal';
+import { JoinCircleForm } from '@/components/circles/JoinCircleForm';
 import { CircleWithDetails } from '@/components/circles/types';
 
 export default function CirclesScreen() {
@@ -18,13 +21,15 @@ export default function CirclesScreen() {
   const [circles, setCircles] = useState<CircleWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCircle, setSelectedCircle] = useState<CircleWithDetails | null>(null);
   const [newCircleName, setNewCircleName] = useState('');
   const [newCircleDescription, setNewCircleDescription] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
+  const [joinCode, setJoinCode] = useState('');
   const [showCircleDetail, setShowCircleDetail] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   useEffect(() => {
     loadCircles();
@@ -71,7 +76,7 @@ export default function CirclesScreen() {
 
         return {
           ...circle,
-          members: members || [],
+          members: mapCircleMembers(members),
           places_count: count || 0,
         };
       })
@@ -104,7 +109,7 @@ export default function CirclesScreen() {
       .single();
 
     if (circleError || !circle) {
-      Alert.alert('Error', 'Failed to create circle');
+      Alert.alert('Error', circleError?.message || 'Failed to create circle');
       return;
     }
 
@@ -115,40 +120,47 @@ export default function CirclesScreen() {
     });
 
     if (memberError) {
-      Alert.alert('Error', 'Failed to add you to the circle');
+      Alert.alert('Error', memberError.message || 'Failed to add you to the circle');
       return;
     }
 
     setShowCreateModal(false);
     setNewCircleName('');
     setNewCircleDescription('');
-    loadCircles();
+    await loadCircles();
+
+    setSelectedCircle({
+      ...circle,
+      members: [],
+      places_count: 0,
+    });
+    setShowInviteModal(true);
   }
 
-  async function inviteMember() {
-    if (!selectedCircle || !inviteEmail.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+  async function handleJoinCircle() {
+    if (!joinCode.trim()) {
+      Alert.alert('Error', 'Please enter an invite code');
       return;
     }
 
-    const { error } = await supabase.from('circle_invitations').insert({
-      circle_id: selectedCircle.id,
-      inviter_id: user!.id,
-      invitee_email: inviteEmail.trim().toLowerCase(),
-    });
+    setJoining(true);
+    const { data, error } = await joinCircleByCode(joinCode);
+    setJoining(false);
 
-    if (error) {
-      if (error.code === '23505') {
-        Alert.alert('Error', 'This person has already been invited');
-      } else {
-        Alert.alert('Error', 'Failed to send invitation');
-      }
+    if (error || !data) {
+      Alert.alert('Error', error?.message || 'Failed to join circle');
       return;
     }
 
-    Alert.alert('Success', 'Invitation sent successfully');
-    setShowInviteModal(false);
-    setInviteEmail('');
+    setShowJoinModal(false);
+    setJoinCode('');
+    await loadCircles();
+
+    if (data.already_member) {
+      Alert.alert('Already a member', `You are already in "${data.circle_name}"`);
+    } else {
+      Alert.alert('Success', `You joined "${data.circle_name}"`);
+    }
   }
 
   async function deleteCircle(circleId: string) {
@@ -180,9 +192,14 @@ export default function CirclesScreen() {
       <ScreenHeader
         title="Circles"
         action={
-          <HeaderActionButton onPress={() => setShowCreateModal(true)}>
-            <Plus size={24} color={Colors.neutral[0]} />
-          </HeaderActionButton>
+          <Row spacing={8}>
+            <HeaderActionButton onPress={() => setShowJoinModal(true)}>
+              <LogIn size={20} color={Colors.neutral[0]} />
+            </HeaderActionButton>
+            <HeaderActionButton onPress={() => setShowCreateModal(true)}>
+              <Plus size={24} color={Colors.neutral[0]} />
+            </HeaderActionButton>
+          </Row>
         }
       />
 
@@ -212,13 +229,20 @@ export default function CirclesScreen() {
             <EmptyState
               icon={<Users size={48} color={Colors.neutral[600]} />}
               title="No Circles Yet"
-              description="Create a circle to start sharing your location with friends and family"
+              description="Create a circle or join one with an invite code to start sharing your location"
               action={
-                <GradientSubmitButton
-                  label="Create Circle"
-                  onPress={() => setShowCreateModal(true)}
-                  icon={<Plus size={20} color={Colors.neutral[0]} />}
-                />
+                <Row spacing={12}>
+                  <GradientSubmitButton
+                    label="Join with Code"
+                    onPress={() => setShowJoinModal(true)}
+                    icon={<LogIn size={20} color={Colors.neutral[0]} />}
+                  />
+                  <GradientSubmitButton
+                    label="Create Circle"
+                    onPress={() => setShowCreateModal(true)}
+                    icon={<Plus size={20} color={Colors.neutral[0]} />}
+                  />
+                </Row>
               }
             />
           ) : null
@@ -235,6 +259,15 @@ export default function CirclesScreen() {
         onSubmit={createCircle}
       />
 
+      <JoinCircleForm
+        visible={showJoinModal}
+        code={joinCode}
+        onCodeChange={setJoinCode}
+        onClose={() => setShowJoinModal(false)}
+        onSubmit={handleJoinCircle}
+        loading={joining}
+      />
+
       <CircleDetailModal
         visible={showCircleDetail}
         circle={selectedCircle}
@@ -249,12 +282,11 @@ export default function CirclesScreen() {
         }}
       />
 
-      <InviteMemberForm
+      <ShareCircleCodeModal
         visible={showInviteModal}
-        email={inviteEmail}
-        onEmailChange={setInviteEmail}
+        circleName={selectedCircle?.name || ''}
+        inviteCode={selectedCircle?.invite_code || ''}
         onClose={() => setShowInviteModal(false)}
-        onSubmit={inviteMember}
       />
     </View>
   );
