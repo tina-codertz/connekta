@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Alert, Text as RNText } from 'react-native';
+import { View, StyleSheet, Alert, Text as RNText, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,8 +69,16 @@ export default function MapScreen() {
   }, [user?.id]);
 
   useEffect(() => {
-    loadInitialData();
-    refreshUnreadCount();
+    if (!user?.id) {
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadInitialData();
+      refreshUnreadCount();
+    });
+
+    return () => task.cancel();
   }, [user?.id, refreshUnreadCount]);
 
   useEffect(() => {

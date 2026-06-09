@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initNativeMapbox } from '@/lib/mapbox-native';
 import { setupAuthSessionRefresh } from '@/lib/supabase';
+import { BiometricGate } from '@/components/BiometricGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -49,21 +50,23 @@ function RootLayoutNav() {
   }
 
   return (
-    <View style={styles.root}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="invite" />
-        <Stack.Screen
-          name="sos"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
-      </Stack>
-    </View>
+    <BiometricGate hasSession={Boolean(user)}>
+      <View style={styles.root}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="invite" />
+          <Stack.Screen
+            name="sos"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </Stack>
+      </View>
+    </BiometricGate>
   );
 }
 

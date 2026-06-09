@@ -2,6 +2,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import { BACKGROUND_LOCATION_TASK } from '@/lib/background-location-constants';
 import { uploadLocationToSupabase } from '@/lib/location-upload';
+import { shouldUploadLocation } from '@/lib/location-throttle';
 
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
@@ -13,7 +14,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     ?.locations;
 
   const latest = locations?.[locations.length - 1];
-  if (!latest) {
+  if (!latest || !shouldUploadLocation(latest)) {
     return;
   }
 

@@ -2,19 +2,25 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types/database';
-import { getNameFromUserMetadata, toFirstName } from '@/lib/profile';
+import {
+  clearLinkedUsername,
+  deriveDevicePassword,
+  getDeviceId,
+  getLinkedUsername,
+  normalizeUsername,
+  saveLinkedUsername,
+  setBiometricUnlockEnabled,
+  usernameToAuthEmail,
+} from '@/lib/device-auth';
+import { resetLocationUploadThrottle } from '@/lib/location-throttle';
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (
-    email: string,
-    password: string,
-    fullName: string
-  ) => Promise<{ error: Error | null; needsEmailConfirmation?: boolean }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  register: (username: string) => Promise<{ error: Error | null }>;
+  signIn: (username: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
@@ -39,6 +45,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let subscription: { unsubscribe: () => void } | undefined;
 
+    async function tryRestoreSession() {
+      const linkedUsername = await getLinkedUsername();
+      if (!linkedUsername || !active) {
+        return;
+      }
+
+      const normalized = normalizeUsername(linkedUsername);
+      if (!normalized) {
+        return;
+      }
+
+      const deviceId = await getDeviceId();
+      const password = await deriveDevicePassword(deviceId, normalized);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: usernameToAuthEmail(normalized),
+        password,
+      });
+
+      if (error) {
+        console.warn('Device session restore failed:', error.message);
+      } else if (data.session?.user && active) {
+        setSession(data.session);
+        setUser(data.session.user);
+        await fetchProfile(data.session.user);
+      }
+    }
+
     try {
       const { data } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
         if (!active) return;
@@ -57,7 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           setProfile(null);
-          if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
+          if (event === 'INITIAL_SESSION') {
+            await tryRestoreSession();
+            setLoading(false);
+          } else if (event === 'SIGNED_OUT') {
             setLoading(false);
           }
         }
@@ -75,30 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  async function syncAuthMetadata(updates: {
-    full_name?: string;
-    first_name?: string;
-    phone?: string | null;
-  }) {
-    const payload: Record<string, string> = {};
-    if (updates.full_name !== undefined) payload.full_name = updates.full_name;
-    if (updates.first_name !== undefined) payload.first_name = updates.first_name;
-    if (updates.phone !== undefined) payload.phone = updates.phone ?? '';
-    if (Object.keys(payload).length === 0) return null;
-
-    const { data, error } = await supabase.auth.updateUser({ data: payload });
-    if (error) {
-      console.warn('Failed to sync auth metadata:', error.message);
-      return null;
-    }
-
-    if (data.user) {
-      setUser(data.user);
-    }
-
-    return data.user ?? null;
-  }
-
   async function ensureProfile(authUser: User): Promise<Profile | null> {
     const { data: existing, error: fetchError } = await supabase
       .from('profiles')
@@ -110,14 +122,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('Failed to fetch profile:', fetchError.message);
     }
 
-    const metadataName = getNameFromUserMetadata(authUser);
+    const metadataUsername =
+      typeof authUser.user_metadata?.username === 'string'
+        ? authUser.user_metadata.username
+        : null;
 
     if (existing) {
-      if (!existing.full_name?.trim() && metadataName) {
+      if (metadataUsername && existing.username !== metadataUsername) {
         const { data: updated, error: updateError } = await supabase
           .from('profiles')
           .update({
-            full_name: metadataName,
+            username: metadataUsername,
+            full_name: existing.full_name || metadataUsername,
             updated_at: new Date().toISOString(),
           })
           .eq('id', authUser.id)
@@ -132,14 +148,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return existing;
     }
 
-    if (!authUser.email) return null;
-
+    const username = metadataUsername ?? null;
     const { data: created, error: createError } = await supabase
       .from('profiles')
       .insert({
         id: authUser.id,
         email: authUser.email,
-        full_name: metadataName,
+        username,
+        full_name: username,
+        device_id:
+          typeof authUser.user_metadata?.device_id === 'string'
+            ? authUser.user_metadata.device_id
+            : null,
       })
       .select('*')
       .single();
@@ -163,49 +183,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signUp(email: string, password: string, fullName: string) {
-    const firstName = toFirstName(fullName);
-    const trimmedFullName = fullName.trim();
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: trimmedFullName,
-          first_name: firstName,
-        },
-      },
-    });
-
-    if (error) return { error };
-
-    if (data.session?.user) {
-      await supabase.from('profiles').upsert(
-        {
-          id: data.session.user.id,
-          email: data.session.user.email ?? email,
-          full_name: firstName || trimmedFullName,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
+  async function authenticateUsername(usernameInput: string, mode: 'register' | 'sign-in') {
+    const username = normalizeUsername(usernameInput);
+    if (!username) {
+      return {
+        error: new Error('Username must be 3–20 characters (letters, numbers, underscore).'),
+      };
     }
 
-    return { error: null, needsEmailConfirmation: !data.session };
+    const deviceId = await getDeviceId();
+    const password = await deriveDevicePassword(deviceId, username);
+    const email = usernameToAuthEmail(username);
+
+    if (mode === 'register') {
+      const { data: available, error: availabilityError } = await supabase.rpc(
+        'is_username_available',
+        { p_username: username }
+      );
+
+      if (availabilityError) {
+        return { error: new Error(availabilityError.message) };
+      }
+
+      if (!available) {
+        return { error: new Error('That username is already taken. Choose another.') };
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            device_id: deviceId,
+            full_name: username,
+          },
+        },
+      });
+
+      if (error) {
+        const message = error.message.toLowerCase();
+        if (
+          message.includes('already registered') ||
+          message.includes('already been registered') ||
+          message.includes('user already exists')
+        ) {
+          return { error: new Error('That username is already taken. Choose another.') };
+        }
+        return { error };
+      }
+
+      if (data.session?.user) {
+        const { error: profileError } = await supabase.from('profiles').upsert(
+          {
+            id: data.session.user.id,
+            email,
+            username,
+            device_id: deviceId,
+            full_name: username,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+
+        if (profileError?.message.includes('Username already taken')) {
+          return { error: new Error('That username is already taken. Choose another.') };
+        }
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        return {
+          error: new Error(
+            error.message.includes('Invalid login credentials')
+              ? 'No account found for this username on this device.'
+              : error.message
+          ),
+        };
+      }
+    }
+
+    await saveLinkedUsername(username);
+    await setBiometricUnlockEnabled(true);
+    return { error: null };
   }
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  async function register(username: string) {
+    return authenticateUsername(username, 'register');
+  }
 
-    return { error };
+  async function signIn(username: string) {
+    return authenticateUsername(username, 'sign-in');
   }
 
   async function signOut() {
     await supabase.auth.signOut({ scope: 'local' });
+    await clearLinkedUsername();
+    resetLocationUploadThrottle();
     setSession(null);
     setUser(null);
     setProfile(null);
@@ -232,24 +306,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) return { error };
 
-    const metadataUpdates: {
-      full_name?: string;
-      first_name?: string;
-      phone?: string | null;
-    } = {};
-
-    if (normalized.full_name !== undefined) {
-      metadataUpdates.full_name = normalized.full_name ?? '';
-      metadataUpdates.first_name =
-        toFirstName(normalized.full_name ?? '') || normalized.full_name || '';
-    }
-
-    if (normalized.phone !== undefined) {
-      metadataUpdates.phone = normalized.phone;
-    }
-
-    await syncAuthMetadata(metadataUpdates);
-
     if (updatedProfile) {
       setProfile(updatedProfile);
     } else {
@@ -272,7 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         loading,
-        signUp,
+        register,
         signIn,
         signOut,
         updateProfile,

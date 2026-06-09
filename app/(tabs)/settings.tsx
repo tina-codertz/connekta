@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Switch, Alert, Platform } from 'react-native';
 import {
   User,
   MapPin,
@@ -7,10 +7,12 @@ import {
   Shield,
   HelpCircle,
   Mail,
+  Fingerprint,
 } from 'lucide-react-native';
 import { Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
 import { useTabBarInsets } from '@/hooks/useTabBarInsets';
+import { isBiometricUnlockEnabled, setBiometricUnlockEnabled } from '@/lib/device-auth';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
@@ -25,9 +27,14 @@ export default function SettingsScreen() {
   const { contentPaddingBottom } = useTabBarInsets();
   const [locationEnabled, setLocationEnabled] = useState(profile?.is_location_enabled ?? true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editingName, setEditingName] = useState(profile?.full_name || '');
   const [editingPhone, setEditingPhone] = useState(profile?.phone || '');
+
+  useEffect(() => {
+    isBiometricUnlockEnabled().then(setBiometricEnabled).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -50,6 +57,11 @@ export default function SettingsScreen() {
       setLocationEnabled(!value);
       Alert.alert('Error', 'Failed to update location settings');
     }
+  };
+
+  const handleToggleBiometric = async (value: boolean) => {
+    setBiometricEnabled(value);
+    await setBiometricUnlockEnabled(value);
   };
 
   const handleSaveProfile = async () => {
@@ -88,19 +100,14 @@ export default function SettingsScreen() {
           <SettingRow
             icon={<User size={22} color={Colors.primary[400]} />}
             title="Edit Profile"
-            subtitle={profile?.full_name || 'Not set'}
+            subtitle={profile?.full_name || profile?.username || 'Not set'}
             onPress={openEditProfile}
           />
           <SettingRow
             icon={<Mail size={22} color={Colors.primary[400]} />}
-            title="Email"
-            subtitle={profile?.email || 'Not set'}
+            title="Username"
+            subtitle={`@${profile?.username ?? 'unknown'}`}
             isLast
-            trailing={
-              <View style={styles.verifiedBadge}>
-                <Text textStyle={styles.verifiedText}>Verified</Text>
-              </View>
-            }
           />
         </SettingsSection>
 
@@ -118,6 +125,21 @@ export default function SettingsScreen() {
               />
             }
           />
+          {Platform.OS !== 'web' ? (
+            <SettingRow
+              icon={<Fingerprint size={22} color={Colors.primary[400]} />}
+              title="Biometric Unlock"
+              subtitle="Require Face ID / Touch ID after background"
+              trailing={
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleToggleBiometric}
+                  trackColor={{ false: Colors.neutral[700], true: Colors.primary[600] }}
+                  thumbColor={Colors.neutral[0]}
+                />
+              }
+            />
+          ) : null}
           <SettingRow
             icon={<Shield size={22} color={Colors.secondary[500]} />}
             title="Privacy Settings"

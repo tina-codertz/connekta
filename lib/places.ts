@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { getDisplayName } from '@/lib/profile';
+import { getDisplayName, type DisplayNameProfile } from '@/lib/profile';
 import type { Place } from '@/types/database';
 
 const EARTH_RADIUS_METERS = 6371000;
@@ -194,7 +194,7 @@ export async function reverseGeocodeLabel(
 }
 
 export function getDisplayNameForGeofence(
-  profile: { full_name: string | null; email: string } | null | undefined,
+  profile: DisplayNameProfile | null | undefined,
   fallback = 'Someone'
 ): string {
   return profile ? getDisplayName(profile) : fallback;

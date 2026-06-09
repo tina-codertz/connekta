@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as ExpoLocation from 'expo-location';
@@ -7,9 +7,8 @@ import {
   setActiveLocationUserId,
   uploadLocationToSupabase,
 } from '@/lib/location-upload';
+import { shouldUploadLocation } from '@/lib/location-throttle';
 import type { LocationObject } from '@/lib/location';
-
-const UPLOAD_INTERVAL_MS = 8_000;
 
 const WATCH_OPTIONS: ExpoLocation.LocationOptions = {
   accuracy: ExpoLocation.Accuracy.Balanced,
@@ -84,15 +83,11 @@ export function useLocationTracking(
 ) {
   const [location, setLocation] = useState<LocationObject | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const lastUploadRef = useRef(0);
 
   const uploadLocation = useCallback(
     async (loc: LocationObject) => {
       if (!userId || !locationSharingEnabled) return;
-
-      const now = Date.now();
-      if (now - lastUploadRef.current < UPLOAD_INTERVAL_MS) return;
-      lastUploadRef.current = now;
+      if (!shouldUploadLocation(loc)) return;
 
       await uploadLocationToSupabase(loc, userId);
     },

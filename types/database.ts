@@ -8,7 +8,9 @@ export type Json =
 
 export type ProfileRow = {
   id: string;
-  email: string;
+  email: string | null;
+  username: string | null;
+  device_id: string | null;
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
@@ -29,7 +31,9 @@ export interface Database {
         Relationships: [];
         Insert: {
           id: string;
-          email: string;
+          email?: string | null;
+          username?: string | null;
+          device_id?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;
@@ -43,7 +47,9 @@ export interface Database {
         };
         Update: {
           id?: string;
-          email?: string;
+          email?: string | null;
+          username?: string | null;
+          device_id?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;
@@ -363,6 +369,10 @@ export interface Database {
           friend_id: string;
           already_member: boolean;
         };
+      };
+      is_username_available: {
+        Args: { p_username: string };
+        Returns: boolean;
       };
       search_profiles_for_friends: {
         Args: { p_query: string };

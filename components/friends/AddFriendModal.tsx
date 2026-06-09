@@ -163,7 +163,9 @@ export function AddFriendModal({
 
     try {
       const matches = await findProfilesByEmails(emails);
-      const matchedEmails = new Set(matches.map((profile) => profile.email.toLowerCase()));
+      const matchedEmails = new Set(
+        matches.map((profile) => profile.email?.toLowerCase()).filter(Boolean) as string[]
+      );
       const unmatched = contacts.filter(
         (contact) => !contact.emails.some((email) => matchedEmails.has(email))
       );

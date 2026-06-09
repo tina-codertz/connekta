@@ -28,7 +28,7 @@ export default function InviteScreen() {
     return <Redirect href="/(tabs)/friends" />;
   }
 
-  return <Redirect href="/(auth)/sign-up" />;
+  return <Redirect href="/(auth)" />;
 }
 
 const styles = StyleSheet.create({

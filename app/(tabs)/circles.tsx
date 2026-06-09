@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, StyleSheet, FlatList, Alert, RefreshControl, InteractionManager } from 'react-native';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Plus, Users, LogIn } from 'lucide-react-native';
 import { Row } from '@/components/ExpoUI';
 import { ActionButtonGroup } from '@/components/ui/ActionButtonGroup';
@@ -37,10 +37,18 @@ export default function CirclesScreen() {
   const [showCircleDetail, setShowCircleDetail] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const hasLoadedRef = useRef(false);
 
-  useEffect(() => {
-    loadCircles();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadCircles(!hasLoadedRef.current);
+        hasLoadedRef.current = true;
+      });
+
+      return () => task.cancel();
+    }, [user?.id])
+  );
 
   useEffect(() => {
     const nextAction = Array.isArray(action) ? action[0] : action;
@@ -52,10 +60,12 @@ export default function CirclesScreen() {
     }
   }, [action]);
 
-  async function loadCircles(): Promise<CircleWithDetails[]> {
+  async function loadCircles(showSpinner = true): Promise<CircleWithDetails[]> {
     if (!user) return [];
 
-    setLoading(true);
+    if (showSpinner) {
+      setLoading(true);
+    }
     const { data: memberData } = await supabase
       .from('circle_members')
       .select('circle_id, role')

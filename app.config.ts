@@ -83,6 +83,13 @@ export default (_context: ConfigContext): ExpoConfig => ({
     'expo-web-browser',
     'expo-splash-screen',
     'expo-status-bar',
+    'expo-secure-store',
+    [
+      'expo-local-authentication',
+      {
+        faceIDPermission: 'Allow LocateMate to use Face ID to unlock the app.',
+      },
+    ],
     ...(mapboxPlugin ? [mapboxPlugin] : []),
     [
       'expo-location',

@@ -5,7 +5,7 @@ import type { CircleMemberLocation, FriendMarker } from '@/components/map/types'
 type CircleMemberLocationRow = {
   user_id: string;
   full_name: string | null;
-  email: string;
+  email: string | null;
   avatar_url: string | null;
   is_location_enabled: boolean;
   battery_level: number | null;
@@ -31,6 +31,7 @@ function mapRowToCircleMember(
     name: getDisplayName({
       full_name: row.full_name,
       email: row.email,
+      username: (row as { username?: string | null }).username ?? null,
     }),
     avatar: row.avatar_url,
     isSharing,
@@ -114,7 +115,7 @@ async function fetchCircleMembersFallback(
       const profile = member.profiles as {
         id: string;
         full_name: string | null;
-        email: string;
+        email: string | null;
         avatar_url: string | null;
         is_location_enabled: boolean;
         battery_level: number | null;
