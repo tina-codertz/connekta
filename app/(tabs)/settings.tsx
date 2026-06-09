@@ -13,6 +13,7 @@ import { Text } from '@/components/ExpoUI';
 import { useAuth } from '@/hooks/useAuth';
 import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { isBiometricUnlockEnabled, setBiometricUnlockEnabled } from '@/lib/device-auth';
+import { formatBiometricLockDuration } from '@/lib/biometric-lock';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
@@ -129,7 +130,7 @@ export default function SettingsScreen() {
             <SettingRow
               icon={<Fingerprint size={22} color={Colors.primary[400]} />}
               title="Biometric Unlock"
-              subtitle="Require Face ID / Touch ID after background"
+              subtitle={`Require Face ID / Touch ID after ${formatBiometricLockDuration()} away`}
               trailing={
                 <Switch
                   value={biometricEnabled}

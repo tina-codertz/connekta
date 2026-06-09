@@ -1,21 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
+import { sha256Hex } from '@/lib/sha256';
 
 const DEVICE_AUTH_DOMAIN = 'device.locatemate.local';
 const SECURE_USERNAME_KEY = 'locatemate-username';
 const BIOMETRIC_ENABLED_KEY = 'locatemate-biometric-enabled';
 
 export type NormalizedUsername = string;
-
-type ExpoCryptoModule = {
-  digestStringAsync(
-    algorithm: string,
-    data: string,
-    options?: { encoding: string }
-  ): Promise<string>;
-  getRandomValues(array: Uint8Array): void;
-};
 
 type ExpoSecureStoreModule = {
   getItemAsync(key: string): Promise<string | null>;
@@ -28,10 +20,6 @@ type ExpoApplicationModule = {
   getIosIdForVendorAsync(): Promise<string | null>;
 };
 
-function getExpoCrypto(): ExpoCryptoModule | null {
-  return requireOptionalNativeModule<ExpoCryptoModule>('ExpoCrypto');
-}
-
 function getExpoSecureStore(): ExpoSecureStoreModule | null {
   return requireOptionalNativeModule<ExpoSecureStoreModule>('ExpoSecureStore');
 }
@@ -40,40 +28,31 @@ function getExpoApplication(): ExpoApplicationModule | null {
   return requireOptionalNativeModule<ExpoApplicationModule>('ExpoApplication');
 }
 
-function missingNativeModuleMessage(moduleName: string): string {
-  return `${moduleName} is not available. Rebuild the dev client with: npx expo run:ios`;
-}
-
 async function digestSha256Hex(input: string): Promise<string> {
-  const crypto = getExpoCrypto();
-  if (crypto?.digestStringAsync) {
-    return crypto.digestStringAsync('SHA-256', input, { encoding: 'HEX' });
-  }
-
-  if (globalThis.crypto?.subtle) {
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
     const data = new TextEncoder().encode(input);
-    const hash = await globalThis.crypto.subtle.digest('SHA-256', data);
+    const hash = await subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(hash))
       .map((byte) => byte.toString(16).padStart(2, '0'))
       .join('');
   }
 
-  throw new Error(missingNativeModuleMessage('expo-crypto'));
+  return sha256Hex(input);
 }
 
 async function createRandomId(): Promise<string> {
-  const crypto = getExpoCrypto();
-  if (crypto?.getRandomValues) {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  if (globalThis.crypto?.getRandomValues) {
     const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
+    globalThis.crypto.getRandomValues(bytes);
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-  }
-
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
   }
 
   return `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -172,5 +151,5 @@ export async function isBiometricUnlockEnabled(): Promise<boolean> {
 }
 
 export function isDeviceAuthNativeReady(): boolean {
-  return getExpoCrypto() != null && getExpoSecureStore() != null;
+  return getExpoSecureStore() != null;
 }

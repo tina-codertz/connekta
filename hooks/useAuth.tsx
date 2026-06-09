@@ -9,10 +9,14 @@ import {
   getLinkedUsername,
   normalizeUsername,
   saveLinkedUsername,
-  setBiometricUnlockEnabled,
   usernameToAuthEmail,
 } from '@/lib/device-auth';
 import { resetLocationUploadThrottle } from '@/lib/location-throttle';
+import {
+  isExistingUserError,
+  isRateLimitError,
+  mapAuthError,
+} from '@/lib/auth-errors';
 
 interface AuthContextType {
   session: Session | null;
@@ -195,6 +199,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const password = await deriveDevicePassword(deviceId, username);
     const email = usernameToAuthEmail(username);
 
+    async function ensureProfile(userId: string) {
+      const { error: profileError } = await supabase.from('profiles').upsert(
+        {
+          id: userId,
+          email,
+          username,
+          device_id: deviceId,
+          full_name: username,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+      if (profileError?.message.includes('Username already taken')) {
+        return { error: new Error('That username is already taken. Choose another.') };
+      }
+
+      return { error: null };
+    }
+
+    async function signInWithDeviceCredentials() {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        return { error: mapAuthError(error.message, mode) };
+      }
+
+      if (data.session?.user) {
+        const profileResult = await ensureProfile(data.session.user.id);
+        if (profileResult.error) {
+          return profileResult;
+        }
+      }
+
+      return { error: null };
+    }
+
     if (mode === 'register') {
       const { data: available, error: availabilityError } = await supabase.rpc(
         'is_username_available',
@@ -206,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!available) {
-        return { error: new Error('That username is already taken. Choose another.') };
+        return { error: new Error('That username is already taken. Try Sign In instead.') };
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -222,49 +262,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        const message = error.message.toLowerCase();
-        if (
-          message.includes('already registered') ||
-          message.includes('already been registered') ||
-          message.includes('user already exists')
-        ) {
-          return { error: new Error('That username is already taken. Choose another.') };
+        if (isExistingUserError(error.message) || isRateLimitError(error.message)) {
+          const signInResult = await signInWithDeviceCredentials();
+          if (!signInResult.error) {
+            await saveLinkedUsername(username);
+            return { error: null };
+          }
         }
-        return { error };
+
+        return { error: mapAuthError(error.message, 'register') };
       }
 
       if (data.session?.user) {
-        const { error: profileError } = await supabase.from('profiles').upsert(
-          {
-            id: data.session.user.id,
-            email,
-            username,
-            device_id: deviceId,
-            full_name: username,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        );
-
-        if (profileError?.message.includes('Username already taken')) {
-          return { error: new Error('That username is already taken. Choose another.') };
+        const profileResult = await ensureProfile(data.session.user.id);
+        if (profileResult.error) {
+          return profileResult;
+        }
+      } else {
+        const signInResult = await signInWithDeviceCredentials();
+        if (signInResult.error) {
+          return {
+            error: new Error(
+              'Account may have been created, but sign-in failed. Try Sign In, or disable "Confirm email" in Supabase → Authentication → Providers → Email.'
+            ),
+          };
         }
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        return {
-          error: new Error(
-            error.message.includes('Invalid login credentials')
-              ? 'No account found for this username on this device.'
-              : error.message
-          ),
-        };
+      const signInResult = await signInWithDeviceCredentials();
+      if (signInResult.error) {
+        return signInResult;
       }
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      return {
+        error: new Error('Could not start a session. Try Sign In, or check Supabase Auth settings.'),
+      };
+    }
+
     await saveLinkedUsername(username);
-    await setBiometricUnlockEnabled(true);
     return { error: null };
   }
 

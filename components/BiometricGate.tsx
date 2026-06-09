@@ -8,6 +8,7 @@ import {
   type AppStateStatus,
 } from 'react-native';
 import { Text } from '@/components/ExpoUI';
+import { BIOMETRIC_LOCK_AFTER_MS } from '@/lib/biometric-lock';
 import { isBiometricUnlockEnabled } from '@/lib/device-auth';
 import {
   authenticateWithBiometrics,
@@ -17,7 +18,7 @@ import {
 } from '@/lib/local-authentication';
 import { Colors } from '@/lib/theme';
 
-const LOCK_GRACE_MS = 30_000;
+const INACTIVITY_CHECK_MS = 30_000;
 
 type BiometricGateProps = {
   children: React.ReactNode;
@@ -26,18 +27,38 @@ type BiometricGateProps = {
 
 export function BiometricGate({ children, hasSession }: BiometricGateProps) {
   const [locked, setLocked] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [supported, setSupported] = useState(false);
   const backgroundAtRef = useRef<number | null>(null);
+  const lastActivityRef = useRef(Date.now());
+  const lockingRef = useRef(false);
+
+  const refreshBiometricEnabled = useCallback(async () => {
+    const enabled = await isBiometricUnlockEnabled();
+    setBiometricEnabled(enabled);
+    if (!enabled) {
+      setLocked(false);
+      lockingRef.current = false;
+    }
+    return enabled;
+  }, []);
+
+  const recordActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    backgroundAtRef.current = null;
+  }, []);
 
   const unlock = useCallback(async () => {
     if (Platform.OS === 'web' || !hasSession) {
       setLocked(false);
+      lockingRef.current = false;
       return;
     }
 
     const enabled = await isBiometricUnlockEnabled();
     if (!enabled) {
       setLocked(false);
+      lockingRef.current = false;
       return;
     }
 
@@ -49,14 +70,45 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
 
     if (result.success) {
       setLocked(false);
-      backgroundAtRef.current = null;
+      lockingRef.current = false;
+      recordActivity();
     }
-  }, [hasSession]);
+  }, [hasSession, recordActivity]);
+
+  const lockIfInactive = useCallback(async () => {
+    if (lockingRef.current || locked || Platform.OS === 'web' || !hasSession) {
+      return;
+    }
+
+    const enabled = await isBiometricUnlockEnabled();
+    if (!enabled || !supported) {
+      return;
+    }
+
+    const idleMs = Date.now() - lastActivityRef.current;
+    const backgroundAt = backgroundAtRef.current;
+    const awayMs = backgroundAt ? Date.now() - backgroundAt : 0;
+    const shouldLock =
+      idleMs >= BIOMETRIC_LOCK_AFTER_MS || awayMs >= BIOMETRIC_LOCK_AFTER_MS;
+
+    if (!shouldLock) {
+      if (backgroundAt != null && awayMs < BIOMETRIC_LOCK_AFTER_MS) {
+        backgroundAtRef.current = null;
+      }
+      return;
+    }
+
+    lockingRef.current = true;
+    setLocked(true);
+    await unlock();
+  }, [hasSession, locked, supported, unlock]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
       return;
     }
+
+    void refreshBiometricEnabled();
 
     if (!isLocalAuthenticationAvailable()) {
       setSupported(false);
@@ -68,28 +120,27 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
         setSupported(hasHardware && enrolled);
       })
       .catch(() => setSupported(false));
-  }, []);
+  }, [refreshBiometricEnabled]);
 
   useEffect(() => {
-    if (!hasSession || Platform.OS === 'web') {
+    if (!hasSession || Platform.OS === 'web' || !biometricEnabled || !supported) {
       setLocked(false);
+      lockingRef.current = false;
       return;
     }
 
     let active = true;
-
-    async function maybeLock() {
-      const enabled = await isBiometricUnlockEnabled();
-      if (!active || !enabled || !supported) {
-        return;
-      }
-      setLocked(true);
-      await unlock();
-    }
+    recordActivity();
 
     const onAppStateChange = (nextState: AppStateStatus) => {
+      if (!active) {
+        return;
+      }
+
       if (nextState === 'background' || nextState === 'inactive') {
-        backgroundAtRef.current = Date.now();
+        if (backgroundAtRef.current == null) {
+          backgroundAtRef.current = Date.now();
+        }
         return;
       }
 
@@ -97,41 +148,91 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
         return;
       }
 
-      const backgroundAt = backgroundAtRef.current;
-      if (!backgroundAt) {
-        return;
-      }
-
-      if (Date.now() - backgroundAt >= LOCK_GRACE_MS) {
-        void maybeLock();
-      } else {
-        backgroundAtRef.current = null;
-      }
+      void refreshBiometricEnabled().then((enabled) => {
+        if (!active || !enabled) {
+          backgroundAtRef.current = null;
+          return;
+        }
+        void lockIfInactive();
+      });
     };
 
-    const subscription = AppState.addEventListener('change', onAppStateChange);
+    const inactivityTimer = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        void lockIfInactive();
+      }
+    }, INACTIVITY_CHECK_MS);
+
+    const appStateSubscription = AppState.addEventListener('change', onAppStateChange);
     return () => {
       active = false;
-      subscription.remove();
+      appStateSubscription.remove();
+      clearInterval(inactivityTimer);
     };
-  }, [hasSession, supported, unlock]);
+  }, [
+    biometricEnabled,
+    hasSession,
+    lockIfInactive,
+    recordActivity,
+    refreshBiometricEnabled,
+    supported,
+  ]);
 
-  if (!locked) {
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void refreshBiometricEnabled();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [refreshBiometricEnabled]);
+
+  if (!hasSession || !biometricEnabled) {
     return <>{children}</>;
   }
 
+  if (!locked) {
+    return (
+      <View
+        style={styles.container}
+        onStartShouldSetResponder={() => {
+          recordActivity();
+          return false;
+        }}
+        onMoveShouldSetResponder={() => {
+          recordActivity();
+          return false;
+        }}
+        onResponderTerminationRequest={() => false}
+      >
+        {children}
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.overlay}>
-      <Text textStyle={styles.title}>LocateMate is locked</Text>
-      <Text textStyle={styles.subtitle}>Use Face ID or Touch ID to continue</Text>
-      <TouchableOpacity style={styles.button} onPress={unlock}>
-        <Text textStyle={styles.buttonText}>Unlock</Text>
-      </TouchableOpacity>
+    <View style={styles.container}>
+      {children}
+      <View style={styles.overlay}>
+        <Text textStyle={styles.title}>LocateMate is locked</Text>
+        <Text textStyle={styles.subtitle}>Use Face ID or Touch ID to continue</Text>
+        <TouchableOpacity style={styles.button} onPress={unlock}>
+          <Text textStyle={styles.buttonText}>Unlock</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   overlay: {
     ...StyleSheet.absoluteFill,
     zIndex: 999,
