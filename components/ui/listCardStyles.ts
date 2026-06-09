@@ -20,11 +20,13 @@ export const listCardStyles = StyleSheet.create({
     minWidth: 0,
   },
   name: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: '600',
     color: Colors.neutral[0],
   },
   subtitle: {
+    flexShrink: 1,
     fontSize: 12,
     color: Colors.neutral[500],
   },

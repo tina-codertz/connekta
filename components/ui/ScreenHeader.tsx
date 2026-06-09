@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   title: {
+    flex: 1,
     fontSize: 24,
     fontWeight: '700',
     color: Colors.neutral[0],

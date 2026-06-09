@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Mail } from 'lucide-react-native';
-import { Column, RNHostView, Text } from '@/components/ExpoUI';
+import { Column, Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
 interface FormFieldProps extends TextInputProps {
@@ -20,13 +20,11 @@ export function FormField({ label, containerStyle, style, ...inputProps }: FormF
   return (
     <Column spacing={8} style={containerStyle}>
       <Text textStyle={styles.label}>{label}</Text>
-      <RNHostView matchContents>
-        <TextInput
-          style={[styles.input, inputProps.multiline && styles.textArea, style]}
-          placeholderTextColor={Colors.neutral[500]}
-          {...inputProps}
-        />
-      </RNHostView>
+      <TextInput
+        style={[styles.input, inputProps.multiline && styles.textArea, style]}
+        placeholderTextColor={Colors.neutral[500]}
+        {...inputProps}
+      />
     </Column>
   );
 }
@@ -47,20 +45,18 @@ export function EmailFormField({
   return (
     <Column spacing={8}>
       <Text textStyle={styles.label}>{label}</Text>
-      <RNHostView matchContents>
-        <View style={styles.emailRow}>
-          <Mail size={20} color={Colors.neutral[500]} style={styles.emailIcon} />
-          <TextInput
-            style={styles.emailInput}
-            placeholder={placeholder}
-            placeholderTextColor={Colors.neutral[500]}
-            value={value}
-            onChangeText={onChangeText}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-      </RNHostView>
+      <View style={styles.emailRow}>
+        <Mail size={20} color={Colors.neutral[500]} style={styles.emailIcon} />
+        <TextInput
+          style={styles.emailInput}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.neutral[500]}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
     </Column>
   );
 }

@@ -1,20 +1,14 @@
 import React from 'react';
 import {
-  Platform,
+  Pressable,
   StyleSheet,
+  Text as RNText,
   View,
   type StyleProp,
   type TextStyle,
   type ViewProps,
   type ViewStyle,
 } from 'react-native';
-import {
-  Host as UIHost,
-  Column as UIColumn,
-  Row as UIRow,
-  Text as UIText,
-  type UniversalStyle,
-} from '@expo/ui';
 
 export {
   BottomSheet,
@@ -22,6 +16,7 @@ export {
   Checkbox,
   Collapsible,
   FieldGroup,
+  Host as NativeHost,
   Icon,
   List,
   ListItem,
@@ -40,173 +35,156 @@ export type {
   UniversalStyle,
 } from '@expo/ui';
 
-const UNIVERSAL_STYLE_KEYS = new Set<string>([
-  'padding',
-  'paddingHorizontal',
-  'paddingVertical',
-  'paddingTop',
-  'paddingBottom',
-  'paddingLeft',
-  'paddingRight',
-  'backgroundColor',
-  'borderRadius',
-  'borderWidth',
-  'borderColor',
-  'opacity',
-  'width',
-  'height',
-]);
+type Alignment = 'start' | 'center' | 'end' | 'flex-start' | 'flex-end' | 'stretch';
 
-const TEXT_STYLE_KEYS = new Set<string>([
-  'color',
-  'fontSize',
-  'fontWeight',
-  'fontFamily',
-  'lineHeight',
-  'letterSpacing',
-  'textAlign',
-]);
+const columnStyles = StyleSheet.create({
+  base: { flexDirection: 'column', alignSelf: 'stretch' },
+  start: { alignItems: 'flex-start' },
+  center: { alignItems: 'center' },
+  end: { alignItems: 'flex-end' },
+  flexStart: { alignItems: 'flex-start' },
+  flexEnd: { alignItems: 'flex-end' },
+  stretch: { alignItems: 'stretch' },
+});
 
-function partitionViewStyle(style?: StyleProp<ViewStyle>) {
-  const flat = StyleSheet.flatten(style);
-  if (!flat) {
-    return { universal: undefined, layout: undefined };
+const rowStyles = StyleSheet.create({
+  base: { flexDirection: 'row', alignSelf: 'stretch' },
+  start: { alignItems: 'flex-start' },
+  center: { alignItems: 'center' },
+  end: { alignItems: 'flex-end' },
+  flexStart: { alignItems: 'flex-start' },
+  flexEnd: { alignItems: 'flex-end' },
+  stretch: { alignItems: 'stretch' },
+});
+
+function alignmentStyle(
+  map: Record<string, ViewStyle>,
+  alignment: Alignment | undefined
+): ViewStyle | undefined {
+  switch (alignment) {
+    case 'center':
+      return map.center;
+    case 'end':
+    case 'flex-end':
+      return map.end;
+    case 'stretch':
+      return map.stretch;
+    case 'flex-start':
+    case 'start':
+    default:
+      return map.start;
   }
-
-  const universal: UniversalStyle = {};
-  const layout: ViewStyle = {};
-
-  for (const [key, value] of Object.entries(flat)) {
-    if (value == null) continue;
-    if (UNIVERSAL_STYLE_KEYS.has(key)) {
-      (universal as Record<string, unknown>)[key] = value;
-    } else {
-      (layout as Record<string, unknown>)[key] = value;
-    }
-  }
-
-  return {
-    universal: Object.keys(universal).length > 0 ? universal : undefined,
-    layout: Object.keys(layout).length > 0 ? layout : undefined,
-  };
-}
-
-function partitionTextStyle(style?: StyleProp<TextStyle>) {
-  const flat = StyleSheet.flatten(style);
-  if (!flat) {
-    return { textStyle: undefined, layout: undefined };
-  }
-
-  const textStyle: Record<string, unknown> = {};
-  const layout: ViewStyle = {};
-
-  for (const [key, value] of Object.entries(flat)) {
-    if (value == null) continue;
-    if (TEXT_STYLE_KEYS.has(key)) {
-      textStyle[key] = value;
-    } else {
-      (layout as Record<string, unknown>)[key] = value;
-    }
-  }
-
-  return {
-    textStyle: Object.keys(textStyle).length > 0 ? textStyle : undefined,
-    layout: Object.keys(layout).length > 0 ? layout : undefined,
-  };
-}
-
-function withWebLayoutWrapper(node: React.ReactElement, layout: ViewStyle | undefined) {
-  if (Platform.OS !== 'web' || !layout) return node;
-  return <View style={layout}>{node}</View>;
-}
-
-function withNativeHost(
-  node: React.ReactElement,
-  matchContents: boolean | { vertical?: boolean; horizontal?: boolean } = true
-) {
-  if (Platform.OS === 'web') return node;
-  return <UIHost matchContents={matchContents}>{node}</UIHost>;
 }
 
 type LayoutComponentProps = ViewProps & {
   spacing?: number;
-  alignment?: 'start' | 'center' | 'end' | 'flex-start' | 'flex-end' | 'stretch';
+  alignment?: Alignment;
   children?: React.ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
+  hidden?: boolean;
 };
 
-function normalizeAlignment(
-  alignment: LayoutComponentProps['alignment']
-): 'start' | 'center' | 'end' | undefined {
-  if (!alignment || alignment === 'stretch') return undefined;
-  if (alignment === 'flex-start') return 'start';
-  if (alignment === 'flex-end') return 'end';
-  return alignment;
-}
-
 export function Host({ style, children, ...props }: ViewProps & { children?: React.ReactNode }) {
-  const { universal, layout } = partitionViewStyle(style);
-  return withWebLayoutWrapper(
-    <UIHost style={universal} {...props}>
+  return (
+    <View style={style} {...props}>
       {children}
-    </UIHost>,
-    layout
+    </View>
   );
 }
 
-export function Column({ style, alignment, children, ...props }: LayoutComponentProps) {
-  const { universal, layout } = partitionViewStyle(style);
-  return withWebLayoutWrapper(
-    withNativeHost(
-      <UIColumn style={universal} alignment={normalizeAlignment(alignment)} {...props}>
-        {children}
-      </UIColumn>,
-      { vertical: true }
-    ),
-    layout
+export function Column({
+  style,
+  alignment = 'start',
+  spacing,
+  children,
+  onPress,
+  disabled,
+  hidden,
+  ...props
+}: LayoutComponentProps) {
+  const Container = onPress ? Pressable : View;
+
+  return (
+    <Container
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        columnStyles.base,
+        alignmentStyle(columnStyles, alignment),
+        spacing != null && { gap: spacing },
+        style,
+        hidden && { display: 'none' },
+        disabled && { opacity: 0.5 },
+      ]}
+      {...props}
+    >
+      {children}
+    </Container>
   );
 }
 
-export function Row({ style, alignment, children, ...props }: LayoutComponentProps) {
-  const { universal, layout } = partitionViewStyle(style);
-  return withWebLayoutWrapper(
-    withNativeHost(
-      <UIRow style={universal} alignment={normalizeAlignment(alignment)} {...props}>
-        {children}
-      </UIRow>,
-      { vertical: true }
-    ),
-    layout
+export function Row({
+  style,
+  alignment = 'start',
+  spacing,
+  children,
+  onPress,
+  disabled,
+  hidden,
+  ...props
+}: LayoutComponentProps) {
+  const Container = onPress ? Pressable : View;
+
+  return (
+    <Container
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        rowStyles.base,
+        alignmentStyle(rowStyles, alignment),
+        spacing != null && { gap: spacing },
+        style,
+        hidden && { display: 'none' },
+        disabled && { opacity: 0.5 },
+      ]}
+      {...props}
+    >
+      {children}
+    </Container>
   );
 }
 
-type AppTextProps = Omit<React.ComponentProps<typeof UIText>, 'children' | 'textStyle'> & {
+type AppTextProps = {
   children?: React.ReactNode;
   textStyle?: StyleProp<TextStyle>;
   style?: StyleProp<TextStyle>;
+  numberOfLines?: number;
+  onPress?: () => void;
+  disabled?: boolean;
+  hidden?: boolean;
+  testID?: string;
 };
 
-function textChildrenToString(children: React.ReactNode): string {
-  if (children == null || typeof children === 'boolean') return '';
-  if (typeof children === 'string' || typeof children === 'number') return String(children);
-  if (Array.isArray(children)) return children.map(textChildrenToString).join('');
-  if (React.isValidElement<{ children?: React.ReactNode }>(children)) {
-    return textChildrenToString(children.props.children);
-  }
-  return '';
-}
-
-export function Text({ textStyle, style, children, ...props }: AppTextProps) {
-  const fromStyle = partitionTextStyle(style);
-  const mergedTextStyle = StyleSheet.flatten([textStyle, fromStyle.textStyle]) as
-    | React.ComponentProps<typeof UIText>['textStyle']
-    | undefined;
-
-  return withWebLayoutWrapper(
-    withNativeHost(
-      <UIText textStyle={mergedTextStyle} {...props}>
-        {textChildrenToString(children)}
-      </UIText>
-    ),
-    fromStyle.layout
+export function Text({
+  textStyle,
+  style,
+  children,
+  numberOfLines,
+  onPress,
+  disabled,
+  hidden,
+  testID,
+}: AppTextProps) {
+  return (
+    <RNText
+      numberOfLines={numberOfLines}
+      onPress={onPress}
+      disabled={disabled}
+      testID={testID}
+      style={[textStyle, style, hidden && { display: 'none' }, disabled && { opacity: 0.5 }]}
+    >
+      {children}
+    </RNText>
   );
 }

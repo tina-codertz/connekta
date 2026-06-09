@@ -59,21 +59,19 @@ export default function SignInScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ marginTop: 24, alignItems: 'center' }}>
+          <Column spacing={16} alignment="center" style={styles.hero}>
             <Image
               source={require('@/assets/app-logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
-            <Column spacing={16} alignment="center">
-              <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
-                LocateMe
-              </Text>
-              <Text textStyle={{ fontSize: 16, color: Colors.neutral[400] }}>
-                Stay connected with your circle
-              </Text>
-            </Column>
-          </View>
+            <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
+              LocateMe
+            </Text>
+            <Text textStyle={{ fontSize: 16, color: Colors.neutral[400] }}>
+              Stay connected with your circle
+            </Text>
+          </Column>
 
           <View style={styles.formSection}>
             <View style={styles.inputWrapper}>
@@ -146,10 +144,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
+  hero: { marginTop: 24, alignItems: 'center' },
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 16,
   },
   formSection: { marginTop: 32 },
   inputWrapper: {
