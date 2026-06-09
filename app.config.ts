@@ -78,6 +78,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    './plugins/withHermesCompiler.js',
     'expo-router',
     'expo-font',
     'expo-web-browser',
