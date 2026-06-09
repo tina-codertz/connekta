@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Switch, Alert, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Switch, Alert, Platform, Linking } from 'react-native';
 import {
   User,
   MapPin,
@@ -10,10 +10,16 @@ import {
   Fingerprint,
 } from 'lucide-react-native';
 import { Text } from '@/components/ExpoUI';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useTabBarInsets } from '@/hooks/useTabBarInsets';
 import { isBiometricUnlockEnabled, setBiometricUnlockEnabled } from '@/lib/device-auth';
 import { formatBiometricLockDuration } from '@/lib/biometric-lock';
+import {
+  getBiometricSupport,
+  registerBiometricForAppUnlock,
+  type BiometricSupport,
+} from '@/lib/local-authentication';
 import { Colors } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SafeAreaScreen } from '@/components/ui/SafeAreaScreen';
@@ -29,13 +35,30 @@ export default function SettingsScreen() {
   const [locationEnabled, setLocationEnabled] = useState(profile?.is_location_enabled ?? true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricSupport, setBiometricSupport] = useState<BiometricSupport | null>(null);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editingName, setEditingName] = useState(profile?.full_name || '');
   const [editingPhone, setEditingPhone] = useState(profile?.phone || '');
 
-  useEffect(() => {
-    isBiometricUnlockEnabled().then(setBiometricEnabled).catch(() => undefined);
+  const loadBiometricState = useCallback(async () => {
+    const [enabled, support] = await Promise.all([
+      isBiometricUnlockEnabled(),
+      getBiometricSupport(),
+    ]);
+    setBiometricEnabled(enabled);
+    setBiometricSupport(support);
   }, []);
+
+  useEffect(() => {
+    loadBiometricState().catch(() => undefined);
+  }, [loadBiometricState]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBiometricState().catch(() => undefined);
+    }, [loadBiometricState])
+  );
 
   useEffect(() => {
     if (profile) {
@@ -61,9 +84,71 @@ export default function SettingsScreen() {
   };
 
   const handleToggleBiometric = async (value: boolean) => {
-    setBiometricEnabled(value);
-    await setBiometricUnlockEnabled(value);
+    if (biometricLoading) {
+      return;
+    }
+
+    if (!value) {
+      setBiometricEnabled(false);
+      await setBiometricUnlockEnabled(false);
+      return;
+    }
+
+    const support = biometricSupport ?? (await getBiometricSupport());
+    setBiometricSupport(support);
+
+    if (!support.moduleAvailable || !support.hasHardware) {
+      Alert.alert('Not available', 'This device does not support biometric unlock.');
+      return;
+    }
+
+    if (!support.isEnrolled) {
+      Alert.alert(
+        `Set up ${support.label}`,
+        `Add ${support.label} in your device Settings first, then come back here to enable app lock.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    setBiometricLoading(true);
+    const registration = await registerBiometricForAppUnlock();
+    setBiometricLoading(false);
+
+    if (!registration.success) {
+      Alert.alert('Biometric setup failed', registration.error ?? 'Try again.');
+      return;
+    }
+
+    await setBiometricUnlockEnabled(true);
+    setBiometricEnabled(true);
+    Alert.alert(
+      `${support.label} enabled`,
+      `LocateMate will ask for ${support.label} after ${formatBiometricLockDuration()} away.`
+    );
   };
+
+  const biometricSubtitle = (() => {
+    if (!biometricSupport?.moduleAvailable || !biometricSupport.hasHardware) {
+      return 'Not available on this device';
+    }
+    if (!biometricSupport.isEnrolled) {
+      return `Set up ${biometricSupport.label} in device Settings to enable`;
+    }
+    if (biometricEnabled) {
+      return `${biometricSupport.label} required after ${formatBiometricLockDuration()} away`;
+    }
+    return `Verify ${biometricSupport.label} to enable app lock`;
+  })();
+
+  const showBiometricToggle =
+    Platform.OS !== 'web' &&
+    biometricSupport != null &&
+    biometricSupport.moduleAvailable &&
+    biometricSupport.hasHardware;
 
   const handleSaveProfile = async () => {
     const { error } = await updateProfile({
@@ -126,15 +211,21 @@ export default function SettingsScreen() {
               />
             }
           />
-          {Platform.OS !== 'web' ? (
+          {showBiometricToggle ? (
             <SettingRow
               icon={<Fingerprint size={22} color={Colors.primary[400]} />}
               title="Biometric Unlock"
-              subtitle={`Require Face ID / Touch ID after ${formatBiometricLockDuration()} away`}
+              subtitle={biometricSubtitle}
+              onPress={
+                biometricSupport?.isEnrolled
+                  ? undefined
+                  : () => Linking.openSettings()
+              }
               trailing={
                 <Switch
                   value={biometricEnabled}
                   onValueChange={handleToggleBiometric}
+                  disabled={biometricLoading || !biometricSupport?.isEnrolled}
                   trackColor={{ false: Colors.neutral[700], true: Colors.primary[600] }}
                   thumbColor={Colors.neutral[0]}
                 />

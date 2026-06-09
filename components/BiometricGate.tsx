@@ -11,10 +11,9 @@ import { Text } from '@/components/ExpoUI';
 import { BIOMETRIC_LOCK_AFTER_MS } from '@/lib/biometric-lock';
 import { isBiometricUnlockEnabled } from '@/lib/device-auth';
 import {
-  authenticateWithBiometrics,
-  hasBiometricHardware,
-  isBiometricEnrolled,
+  getBiometricSupport,
   isLocalAuthenticationAvailable,
+  unlockWithBiometrics,
 } from '@/lib/local-authentication';
 import { Colors } from '@/lib/theme';
 
@@ -29,6 +28,7 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
   const [locked, setLocked] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('Face ID or Touch ID');
   const backgroundAtRef = useRef<number | null>(null);
   const lastActivityRef = useRef(Date.now());
   const lockingRef = useRef(false);
@@ -62,18 +62,14 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
       return;
     }
 
-    const result = await authenticateWithBiometrics({
-      promptMessage: 'Unlock LocateMate',
-      cancelLabel: 'Cancel',
-      disableDeviceFallback: false,
-    });
+    const result = await unlockWithBiometrics(biometricLabel);
 
     if (result.success) {
       setLocked(false);
       lockingRef.current = false;
       recordActivity();
     }
-  }, [hasSession, recordActivity]);
+  }, [hasSession, recordActivity, biometricLabel]);
 
   const lockIfInactive = useCallback(async () => {
     if (lockingRef.current || locked || Platform.OS === 'web' || !hasSession) {
@@ -115,9 +111,10 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
       return;
     }
 
-    Promise.all([hasBiometricHardware(), isBiometricEnrolled()])
-      .then(([hasHardware, enrolled]) => {
-        setSupported(hasHardware && enrolled);
+    getBiometricSupport()
+      .then((support) => {
+        setSupported(support.canEnable);
+        setBiometricLabel(support.label);
       })
       .catch(() => setSupported(false));
   }, [refreshBiometricEnabled]);
@@ -220,7 +217,7 @@ export function BiometricGate({ children, hasSession }: BiometricGateProps) {
       {children}
       <View style={styles.overlay}>
         <Text textStyle={styles.title}>LocateMate is locked</Text>
-        <Text textStyle={styles.subtitle}>Use Face ID or Touch ID to continue</Text>
+        <Text textStyle={styles.subtitle}>Use {biometricLabel} to continue</Text>
         <TouchableOpacity style={styles.button} onPress={unlock}>
           <Text textStyle={styles.buttonText}>Unlock</Text>
         </TouchableOpacity>
