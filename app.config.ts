@@ -15,7 +15,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
   owner: 'christinakimario',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/app-logo.png',
   scheme: 'locatemate',
   userInterfaceStyle: 'dark',
   newArchEnabled: true,
@@ -38,7 +38,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
   android: {
     package: 'com.christinakimario.locatemate',
     adaptiveIcon: {
-      foregroundImage: './assets/images/icon.png',
+      foregroundImage: './assets/app-logo.png',
       backgroundColor: '#0F172A',
     },
     permissions: [
@@ -73,7 +73,7 @@ export default (_context: ConfigContext): ExpoConfig => ({
     [
       'expo-notifications',
       {
-        icon: './assets/images/icon.png',
+        icon: './assets/app-logo.png',
         color: '#3B82F6',
       },
     ],

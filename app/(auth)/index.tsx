@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { LinearGradient } from '@/components/LinearGradient';
 import { useRouter } from 'expo-router';
@@ -59,14 +60,11 @@ export default function SignInScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Column spacing={16} alignment="center" style={{ marginTop: 24 }}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#3B82F6', '#2563EB']}
-                style={styles.logoGradient}
-              >
-                <MapPin size={32} color="#FFFFFF" strokeWidth={2.5} />
-              </LinearGradient>
-            </View>
+            <Image
+              source={require('@/assets/app-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
               LocateMe
             </Text>
@@ -146,12 +144,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
-  logoContainer: { marginBottom: 16 },
-  logoGradient: {
-    width: 80, height: 80, borderRadius: 40,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
   },
   formSection: { marginTop: 32 },
   inputWrapper: {
