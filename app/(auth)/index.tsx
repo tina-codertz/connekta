@@ -59,19 +59,21 @@ export default function SignInScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Column spacing={16} alignment="center" style={{ marginTop: 24 }}>
+          <View style={{ marginTop: 24, alignItems: 'center' }}>
             <Image
               source={require('@/assets/app-logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
-              LocateMe
-            </Text>
-            <Text textStyle={{ fontSize: 16, color: Colors.neutral[400] }}>
-              Stay connected with your circle
-            </Text>
-          </Column>
+            <Column spacing={16} alignment="center">
+              <Text textStyle={{ fontSize: 32, fontWeight: '700', color: Colors.neutral[0] }}>
+                LocateMe
+              </Text>
+              <Text textStyle={{ fontSize: 16, color: Colors.neutral[400] }}>
+                Stay connected with your circle
+              </Text>
+            </Column>
+          </View>
 
           <View style={styles.formSection}>
             <View style={styles.inputWrapper}>

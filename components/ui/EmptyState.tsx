@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Column, Text } from '@/components/ExpoUI';
+import { Column, RNHostView, Text } from '@/components/ExpoUI';
 import { Colors } from '@/lib/theme';
 
 interface EmptyStateProps {
@@ -13,10 +13,16 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <Column spacing={16} alignment="center" style={styles.container}>
-      <View style={styles.iconWrapper}>{icon}</View>
+      <RNHostView matchContents>
+        <View style={styles.iconWrapper}>{icon}</View>
+      </RNHostView>
       <Text textStyle={styles.title}>{title}</Text>
       <Text textStyle={styles.description}>{description}</Text>
-      {action}
+      {React.isValidElement(action) ? (
+        <RNHostView matchContents>{action}</RNHostView>
+      ) : (
+        action
+      )}
     </Column>
   );
 }

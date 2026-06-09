@@ -1,19 +1,13 @@
 /**
- * Disable native Mapbox autolinking on Android.
- * The app uses a WebView map on Android; the native SDK can crash on launch in release APKs.
+ * Native module overrides for Android release builds.
+ * Mapbox is iOS-only; Android uses a WebView map.
  */
-const disableAndroidMapbox =
-  process.env.EAS_BUILD_PLATFORM === 'android' ||
-  process.env.EXPO_ANDROID_NO_NATIVE_MAPBOX === '1';
-
 module.exports = {
-  dependencies: disableAndroidMapbox
-    ? {
-        '@rnmapbox/maps': {
-          platforms: {
-            android: null,
-          },
-        },
-      }
-    : {},
+  dependencies: {
+    '@rnmapbox/maps': {
+      platforms: {
+        android: null,
+      },
+    },
+  },
 };

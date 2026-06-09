@@ -1,13 +1,34 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+function isAndroidPrebuild(): boolean {
+  if (process.env.EAS_BUILD_PLATFORM === 'android') return true;
+  if (process.env.EXPO_ANDROID_NO_NATIVE_MAPBOX === '1') return true;
+  const args = process.argv.join(' ');
+  return /--platform(?:=|\s+)android\b/.test(args);
+}
+
 /** Native Mapbox SDK is iOS-only; Android uses WebView to avoid release APK launch crashes. */
-const useNativeMapbox =
-  process.env.EAS_BUILD_PLATFORM !== 'android' &&
-  process.env.EXPO_ANDROID_NO_NATIVE_MAPBOX !== '1';
+const useNativeMapbox = !isAndroidPrebuild();
 
 const mapboxPlugin: [string, { RNMapboxMapsVersion: string }] | null = useNativeMapbox
   ? ['@rnmapbox/maps', { RNMapboxMapsVersion: '11.20.1' }]
   : null;
+
+const requiredPublicEnv = [
+  'EXPO_PUBLIC_SUPABASE_URL',
+  'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  'EXPO_PUBLIC_MAPBOX_TOKEN',
+] as const;
+
+if (process.env.EAS_BUILD === 'true') {
+  const missing = requiredPublicEnv.filter((key) => !process.env[key]?.trim());
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing EAS environment variables: ${missing.join(', ')}. ` +
+        'Add them in expo.dev → Project → Environment variables before building.'
+    );
+  }
+}
 
 export default (_context: ConfigContext): ExpoConfig => ({
   name: 'LocateMate',
@@ -18,10 +39,10 @@ export default (_context: ConfigContext): ExpoConfig => ({
   icon: './assets/app-logo.png',
   scheme: 'locatemate',
   userInterfaceStyle: 'dark',
-  newArchEnabled: true,
   ios: {
     bundleIdentifier: 'com.christinakimario.locatemate',
     supportsTablet: true,
+    deploymentTarget: '16.4',
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
         'LocateMate needs your location to share it with your circles and friends.',
@@ -60,6 +81,8 @@ export default (_context: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-web-browser',
+    'expo-splash-screen',
+    'expo-status-bar',
     ...(mapboxPlugin ? [mapboxPlugin] : []),
     [
       'expo-location',

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { MapPin, Users, User, Settings } from 'lucide-react-native';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, type ColorValue } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SystemUI from 'expo-system-ui';
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
 
 type TabBarIconProps = {
   focused: boolean;
-  color: string;
+  color: ColorValue;
   size: number;
   Icon: LucideIcon;
 };

@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Constants from 'expo-constants';
-import { Host } from '@/components/ExpoUI';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { initNativeMapbox } from '@/lib/mapbox-native';
@@ -41,16 +40,16 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <Host style={{ flex: 1 }}>
+      <View style={styles.root}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3B82F6" />
         </View>
-      </Host>
+      </View>
     );
   }
 
   return (
-    <Host style={{ flex: 1 }}>
+    <View style={styles.root}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
@@ -64,7 +63,7 @@ function RootLayoutNav() {
           }}
         />
       </Stack>
-    </Host>
+    </View>
   );
 }
 
@@ -110,6 +109,10 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

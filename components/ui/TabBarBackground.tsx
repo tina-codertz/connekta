@@ -10,7 +10,7 @@ export function TabBarBackground() {
 
 const styles = StyleSheet.create({
   background: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: TAB_BAR_BACKGROUND,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.neutral[800],

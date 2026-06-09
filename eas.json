@@ -10,13 +10,17 @@
     },
     "preview": {
       "distribution": "internal",
-      "prebuildCommand": "EXPO_ANDROID_NO_NATIVE_MAPBOX=1 npx expo prebuild --platform android --clean --no-install",
+      "prebuildCommand": "bash scripts/eas-prebuild.sh",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "prebuildCommand": "bash scripts/eas-prebuild.sh",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
