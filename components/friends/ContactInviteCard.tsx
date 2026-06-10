@@ -7,6 +7,7 @@ import {
   pickContactPhone,
   sendFriendInviteViaSms,
   sendFriendInviteViaWhatsApp,
+  shareFriendInviteLink,
 } from '@/lib/app-invite';
 import { DeviceContact } from '@/lib/contacts';
 import { Colors } from '@/lib/theme';
@@ -74,7 +75,18 @@ export function ContactInviteCard({
           </TouchableOpacity>
         </Row>
       ) : (
-        <Text textStyle={styles.noPhone}>No number</Text>
+        <TouchableOpacity
+          style={styles.channelButton}
+          onPress={() =>
+            shareFriendInviteLink({
+              inviterUserId,
+              inviterName,
+              recipientName: contact.name,
+            })
+          }
+        >
+          <Text textStyle={styles.channelLabel}>Share invite</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -96,10 +108,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: Colors.primary[400],
-  },
-  noPhone: {
-    fontSize: 12,
-    color: Colors.neutral[600],
-    flexShrink: 0,
   },
 });

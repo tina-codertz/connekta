@@ -382,6 +382,10 @@ export interface Database {
         Args: { p_emails: string[] };
         Returns: ProfileRow[];
       };
+      find_profiles_by_phones: {
+        Args: { p_phones: string[] };
+        Returns: ProfileRow[];
+      };
       users_are_friends: {
         Args: { p_user_id: string };
         Returns: boolean;

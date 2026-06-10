@@ -1,6 +1,30 @@
+import { phoneDigitsOnly } from '@/lib/app-invite';
 import { supabase } from '@/lib/supabase';
 import { consumePendingFriendInviter } from '@/lib/pending-friend-invite';
 import type { Profile } from '@/types/database';
+
+const CONTACT_MATCH_BATCH_SIZE = 150;
+
+async function findProfilesInBatches<T>(
+  values: T[],
+  fetchBatch: (batch: T[]) => Promise<Profile[]>
+): Promise<Profile[]> {
+  if (!values.length) {
+    return [];
+  }
+
+  const profilesById = new Map<string, Profile>();
+
+  for (let index = 0; index < values.length; index += CONTACT_MATCH_BATCH_SIZE) {
+    const batch = values.slice(index, index + CONTACT_MATCH_BATCH_SIZE);
+    const matches = await fetchBatch(batch);
+    for (const profile of matches) {
+      profilesById.set(profile.id, profile);
+    }
+  }
+
+  return [...profilesById.values()];
+}
 
 export async function loadFriendProfiles(userId: string): Promise<Profile[]> {
   const { data: acceptedRequests } = await supabase
@@ -45,15 +69,56 @@ export async function findProfilesByEmails(emails: string[]): Promise<Profile[]>
     return [];
   }
 
-  const { data, error } = await supabase.rpc('find_profiles_by_emails', {
-    p_emails: normalized,
-  });
+  return findProfilesInBatches(normalized, async (batch) => {
+    const { data, error } = await supabase.rpc('find_profiles_by_emails', {
+      p_emails: batch,
+    });
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data as Profile[]) ?? [];
+  });
+}
+
+export async function findProfilesByPhones(phones: string[]): Promise<Profile[]> {
+  const normalized = [
+    ...new Set(phones.map((phone) => phoneDigitsOnly(phone)).filter((digits) => digits.length >= 7)),
+  ];
+
+  if (!normalized.length) {
+    return [];
   }
 
-  return (data as Profile[]) ?? [];
+  return findProfilesInBatches(normalized, async (batch) => {
+    const { data, error } = await supabase.rpc('find_profiles_by_phones', {
+      p_phones: batch,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data as Profile[]) ?? [];
+  });
+}
+
+export async function matchContactsToProfiles(options: {
+  emails: string[];
+  phones: string[];
+}): Promise<Profile[]> {
+  const [emailMatches, phoneMatches] = await Promise.all([
+    findProfilesByEmails(options.emails),
+    findProfilesByPhones(options.phones),
+  ]);
+
+  const profilesById = new Map<string, Profile>();
+  for (const profile of [...emailMatches, ...phoneMatches]) {
+    profilesById.set(profile.id, profile);
+  }
+
+  return [...profilesById.values()];
 }
 
 export async function sendFriendRequest(senderId: string, receiverId: string): Promise<{

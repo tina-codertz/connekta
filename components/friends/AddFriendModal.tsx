@@ -15,12 +15,9 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { FriendsSearchBar } from '@/components/friends/FriendsSearchBar';
 import { SearchResultCard } from '@/components/friends/SearchResultCard';
 import { ContactInviteCard } from '@/components/friends/ContactInviteCard';
-import { DeviceContact, loadDeviceContacts } from '@/lib/contacts';
-import {
-  findProfilesByEmails,
-  searchProfilesForFriends,
-  sendFriendRequest,
-} from '@/lib/friends';
+import { DeviceContact, filterDeviceContacts, loadDeviceContacts } from '@/lib/contacts';
+import { phoneDigitsOnly } from '@/lib/app-invite';
+import { matchContactsToProfiles, searchProfilesForFriends, sendFriendRequest } from '@/lib/friends';
 import { Profile } from '@/types/database';
 import { Colors } from '@/lib/theme';
 
@@ -85,7 +82,9 @@ export function AddFriendModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [contactMatches, setContactMatches] = useState<Profile[]>([]);
+  const [allContacts, setAllContacts] = useState<DeviceContact[]>([]);
   const [unmatchedContacts, setUnmatchedContacts] = useState<DeviceContact[]>([]);
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactsLoaded, setContactsLoaded] = useState(false);
@@ -97,7 +96,9 @@ export function AddFriendModal({
       setSearchQuery('');
       setSearchResults([]);
       setContactMatches([]);
+      setAllContacts([]);
       setUnmatchedContacts([]);
+      setContactSearchQuery('');
       setContactsLoaded(false);
       setContactMessage(null);
     }
@@ -105,6 +106,11 @@ export function AddFriendModal({
 
   const isAlreadyFriend = (profileId: string) => friends.some((friend) => friend.id === profileId);
   const isAlreadyRequested = (profileId: string) => sentRequestReceiverIds.includes(profileId);
+
+  const filteredUnmatchedContacts = useMemo(
+    () => filterDeviceContacts(unmatchedContacts, contactSearchQuery),
+    [contactSearchQuery, unmatchedContacts]
+  );
 
   const contactSections = useMemo<ContactSection[]>(() => {
     const sections: ContactSection[] = [];
@@ -116,15 +122,38 @@ export function AddFriendModal({
       });
     }
 
-    if (unmatchedContacts.length) {
+    if (filteredUnmatchedContacts.length) {
       sections.push({
         title: 'Invite via WhatsApp or Message',
-        data: unmatchedContacts.map((contact) => ({ kind: 'contact', contact })),
+        data: filteredUnmatchedContacts.map((contact) => ({ kind: 'contact', contact })),
       });
     }
 
     return sections;
-  }, [contactMatches, unmatchedContacts]);
+  }, [contactMatches, filteredUnmatchedContacts]);
+
+  function splitMatchedContacts(contacts: DeviceContact[], matches: Profile[]) {
+    const matchedEmails = new Set(
+      matches.map((profile) => profile.email?.trim().toLowerCase()).filter(Boolean) as string[]
+    );
+    const matchedPhoneDigits = new Set(
+      matches
+        .map((profile) => phoneDigitsOnly(profile.phone ?? ''))
+        .filter((digits) => digits.length >= 7)
+    );
+
+    const unmatched = contacts.filter((contact) => {
+      const emailMatched = contact.emails.some((email) => matchedEmails.has(email));
+      const phoneMatched = contact.phones.some((phone) => {
+        const digits = phoneDigitsOnly(phone);
+        return digits.length >= 7 && matchedPhoneDigits.has(digits);
+      });
+
+      return !emailMatched && !phoneMatched;
+    });
+
+    return { unmatched };
+  }
 
   async function handleSearch(query: string) {
     setSearchQuery(query);
@@ -148,44 +177,54 @@ export function AddFriendModal({
   async function handleLoadContacts() {
     setLoadingContacts(true);
     setContactMessage(null);
-
-    const { contacts, error } = await loadDeviceContacts();
-    if (error) {
-      setContactMessage(error);
-      setContactMatches([]);
-      setUnmatchedContacts([]);
-      setContactsLoaded(true);
-      setLoadingContacts(false);
-      return;
-    }
-
-    const emails = contacts.flatMap((contact) => contact.emails);
+    setContactSearchQuery('');
 
     try {
-      const matches = await findProfilesByEmails(emails);
-      const matchedEmails = new Set(
-        matches.map((profile) => profile.email?.toLowerCase()).filter(Boolean) as string[]
-      );
-      const unmatched = contacts.filter(
-        (contact) => !contact.emails.some((email) => matchedEmails.has(email))
-      );
+      const { contacts, error } = await loadDeviceContacts();
+      if (error) {
+        setContactMessage(error);
+        setContactMatches([]);
+        setAllContacts([]);
+        setUnmatchedContacts([]);
+        return;
+      }
 
-      setContactMatches(matches);
-      setUnmatchedContacts(unmatched);
-      setContactMessage(
-        `${matches.length} on LocateMate · ${unmatched.length} to invite`
-      );
-    } catch (matchError) {
-      Alert.alert(
-        'Error',
-        matchError instanceof Error ? matchError.message : 'Failed to match contacts'
-      );
+      setAllContacts(contacts);
+
+      const emails = contacts.flatMap((contact) => contact.emails);
+      const phones = contacts.flatMap((contact) => contact.phones);
+
+      try {
+        const matches = await matchContactsToProfiles({ emails, phones });
+        const { unmatched } = splitMatchedContacts(contacts, matches);
+
+        setContactMatches(matches);
+        setUnmatchedContacts(unmatched);
+        setContactMessage(
+          `${matches.length} on LocateMate · ${unmatched.length} to invite · ${contacts.length} loaded`
+        );
+      } catch (matchError) {
+        console.warn('Contact matching failed:', matchError);
+        setContactMatches([]);
+        setUnmatchedContacts(contacts);
+        setContactMessage(
+          matchError instanceof Error
+            ? `${matchError.message} Showing your contacts for invites.`
+            : 'Could not match contacts on LocateMate. You can still send invites.'
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to load contacts. Try again.';
+      setContactMessage(message);
       setContactMatches([]);
+      setAllContacts([]);
       setUnmatchedContacts([]);
+      Alert.alert('Contacts', message);
+    } finally {
+      setContactsLoaded(true);
+      setLoadingContacts(false);
     }
-
-    setContactsLoaded(true);
-    setLoadingContacts(false);
   }
 
   async function handleSendRequest(receiverId: string) {
@@ -297,12 +336,26 @@ export function AddFriendModal({
             ) : null}
           </View>
 
+          {contactsLoaded && allContacts.length > 0 ? (
+            <FriendsSearchBar
+              value={contactSearchQuery}
+              onChangeText={setContactSearchQuery}
+              onClear={() => setContactSearchQuery('')}
+              placeholder="Search your contacts"
+            />
+          ) : null}
+
           {!contactsLoaded && !loadingContacts ? (
             <EmptyPanel
               icon={<Contact size={32} color={Colors.neutral[600]} />}
               title="Use your contacts"
-              description="Tap Load contacts, then pick someone and send your invite via WhatsApp or Message."
+              description="Tap Load contacts, allow access when prompted, then invite people via WhatsApp or Message."
             />
+          ) : loadingContacts ? (
+            <View style={styles.loadingPanel}>
+              <ActivityIndicator color={Colors.primary[500]} size="large" />
+              <Text textStyle={styles.loadingText}>Loading contacts...</Text>
+            </View>
           ) : (
             <SectionList
               sections={contactSections}
@@ -332,8 +385,12 @@ export function AddFriendModal({
                 contactsLoaded && !loadingContacts ? (
                   <EmptyPanel
                     icon={<Contact size={32} color={Colors.neutral[600]} />}
-                    title="No contacts to show"
-                    description="None of your contacts matched, or contact access was denied."
+                    title={contactSearchQuery ? 'No matching contacts' : 'No contacts to show'}
+                    description={
+                      contactSearchQuery
+                        ? `No contacts match "${contactSearchQuery}".`
+                        : 'None of your contacts have a phone or email, or contact access was denied.'
+                    }
                   />
                 ) : null
               }
